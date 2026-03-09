@@ -1,0 +1,11 @@
+{
+    "name": "game_project",
+    "uuid": "f801fb9e-b320-438c-9020-cfd4da7821f4",
+    "version": "3.8.8",
+    "creator": {
+        "version": "3.8.8"
+    },
+    "scripts": {
+        "build": ""
+    }
+}
