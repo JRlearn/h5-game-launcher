@@ -71,4 +71,4 @@
 *   **專屬工作流 (Workflows)**：您可以直接請 AI 助手幫您套用樣板建立合規的子遊戲專案或 MVC 模塊。
     *   *指令範例：* 「請依照 workflow 建立一個名為 Slot 的新遊戲」
     *   *指令範例：* 「在 lobby 的 components 中，幫我用 workflow 建一個叫做 UserProfile 的 UI 模塊」
-*   **遵守 MVC 與 Cocos 3.8 規範**：透過載入的 `.agents/skills`，AI 會自動嚴格遵循專案的 MVC 架構、組件命名規則 (`xxxUI`, `xxxScript` 等) 以及 Cocos Creator 3.8 的最新寫法。
+*   **遵守 MVC 與 Cocos 3.8.8 規範**：透過載入的 `.agents/skills`，AI 會自動嚴格遵循專案的 MVC 架構、組件命名規則 (`xxxUI`, `xxxScript` 等) 以及 Cocos Creator 3.8 的最新寫法。
