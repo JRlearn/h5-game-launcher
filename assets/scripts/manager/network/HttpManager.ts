@@ -1,4 +1,4 @@
-import { error } from 'cc';
+import { LogManager } from '../core/LogManager';
 
 /**
  * HttpManager - HTTP 請求管理器，用於管理遊戲中的 HTTP 請求。
@@ -29,15 +29,19 @@ export class HttpManager {
     public async get<T>(url: string, params?: Record<string, string | number>): Promise<T> {
         try {
             const queryString = params ? this.buildQueryString(params) : '';
-            const response = await fetch(`${url}${queryString}`, {
+            const fullUrl = `${url}${queryString}`;
+            LogManager.getInstance().debug('Network', `HTTP GET Request: ${fullUrl}`);
+            const response = await fetch(fullUrl, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
-            return await this.handleResponse<T>(response);
+            const data = await this.handleResponse<T>(response);
+            LogManager.getInstance().net('Network', 'RECV', `GET ${url}`, data);
+            return data;
         } catch (err) {
-            error(`GET 請求失敗: ${url}`, err);
+            LogManager.getInstance().error('Network', `GET 請求失敗: ${url}`, err);
             throw err;
         }
     }
@@ -50,6 +54,7 @@ export class HttpManager {
      */
     public async post<T>(url: string, body: Record<string, any>): Promise<T> {
         try {
+            LogManager.getInstance().debug('Network', `HTTP POST Request: ${url}`, body);
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -57,9 +62,11 @@ export class HttpManager {
                 },
                 body: JSON.stringify(body),
             });
-            return await this.handleResponse<T>(response);
+            const data = await this.handleResponse<T>(response);
+            LogManager.getInstance().net('Network', 'RECV', `POST ${url}`, data);
+            return data;
         } catch (err) {
-            error(`POST 請求失敗: ${url}`, err);
+            LogManager.getInstance().error('Network', `POST 請求失敗: ${url}`, err);
             throw err;
         }
     }
@@ -81,7 +88,7 @@ export class HttpManager {
             });
             return await this.handleResponse<T>(response);
         } catch (err) {
-            error(`PUT 請求失敗: ${url}`, err);
+            LogManager.getInstance().error('Network', `PUT 請求失敗: ${url}`, err);
             throw err;
         }
     }
@@ -101,7 +108,7 @@ export class HttpManager {
             });
             return await this.handleResponse<T>(response);
         } catch (err) {
-            error(`DELETE 請求失敗: ${url}`, err);
+            LogManager.getInstance().error('Network', `DELETE 請求失敗: ${url}`, err);
             throw err;
         }
     }
@@ -114,7 +121,10 @@ export class HttpManager {
     private async handleResponse<T>(response: Response): Promise<T> {
         if (!response.ok) {
             const errorText = await response.text();
-            error(`HTTP 請求失敗，狀態碼: ${response.status}, 錯誤信息: ${errorText}`);
+            LogManager.getInstance().error(
+                'Network',
+                `HTTP 請求失敗，狀態碼: ${response.status}, 錯誤信息: ${errorText}`,
+            );
             throw new Error(`HTTP 請求失敗，狀態碼: ${response.status}`);
         }
         return response.json() as Promise<T>;

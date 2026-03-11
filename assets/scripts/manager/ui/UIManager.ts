@@ -1,16 +1,22 @@
-import { _decorator, Component, instantiate } from 'cc';
+import { _decorator, Component, instantiate, Node, Canvas, director } from 'cc';
 import { ResManager } from '../resource/ResManager';
 import { BaseUIController } from '../../framework/ui/BaseUIController';
+import { LogManager } from '../core/LogManager';
 const { ccclass } = _decorator;
+
+export enum UILayer {
+    Background = 'BackgroundLayer',
+    View = 'ViewLayer',
+    Popup = 'PopupLayer',
+    Loading = 'LoadingLayer',
+    Toast = 'ToastLayer',
+}
 
 @ccclass('UIManager')
 export class UIManager extends Component {
     private static instance: UIManager | null = null;
-    private prefabCtrs: Map<new () => BaseUIController, string> = new Map(); // 儲存預製體類型與名稱的對應關係
-
-    private constructor() {
-        super();
-    }
+    private uiCache: Map<string, BaseUIController> = new Map(); // 快取已建立的 UI 實例
+    private layerNodes: Map<UILayer, Node> = new Map(); // 儲存各層級的父節點
 
     /** UIManager 單例 */
     public static getInstance(): UIManager {
@@ -20,37 +26,123 @@ export class UIManager extends Component {
         return this.instance;
     }
 
-    public registerPrefabCtr<T extends BaseUIController>(
-        ctrClass: { new (): T },
-        prefabName: string,
-    ) {
-        this.prefabCtrs.set(ctrClass, prefabName); // 註冊預製體類型與名稱的對應關係
-    }
-
     /**
-     * 創建組件
-     * @param bundleName 資源包名稱
-     * @param componentClass 組件類型
+     * 創建組件 (使用預設 Bundle)
+     * @param prefabName 預製體名稱或路徑 (ex: 'GuessNumPanel')
+     * @param componentClass 對應的腳本組件型別
      */
-    public createComponent<T extends BaseUIController>(componentClass: { new (): T }): T {
-        return this.createComponentFromBundle(
-            ResManager.getInstance().getDefaultBundleName(),
-            componentClass,
-        ); // 使用預設資源包名稱創建組件
+    public createComponent<T extends BaseUIController>(
+        bundleName: string = ResManager.getInstance().getDefaultBundleName(),
+        prefabName: string,
+        componentClass: { new (): T },
+    ): T {
+        return this.createComponentFromBundle(bundleName, prefabName, componentClass);
     }
 
     /**
-     * 創建組件
+     * 從指定 Bundle 創建組件
      * @param bundleName 資源包名稱
-     * @param componentClass 組件類型
+     * @param prefabName 預製體名稱或路徑
+     * @param componentClass 對應的腳本組件型別
      */
     public createComponentFromBundle<T extends BaseUIController>(
         bundleName: string,
+        prefabName: string,
         componentClass: { new (): T },
     ): T {
-        let prefabName = this.prefabCtrs.get(componentClass);
-        let prefab = ResManager.getInstance().getPrefabFromBundle(bundleName, prefabName); // 獲取預製體
+        let prefab = ResManager.getInstance().getPrefabFromBundle(bundleName, prefabName);
+        if (!prefab) {
+            LogManager.getInstance().error(
+                'UI',
+                `UIManager: 找不到預製體 ${prefabName} in bundle ${bundleName}`,
+            );
+            throw new Error(`Missing UI Prefab: ${prefabName}`);
+        }
         let ui = instantiate(prefab);
-        return ui.addComponent(componentClass); // 獲取組件
+        return ui.addComponent(componentClass); // 動態掛載組件
+    }
+
+    /**
+     * 初始化 UI 層級節點 (應在場景初始化時呼叫)
+     * @param canvasRoot Canvas 根節點
+     */
+    public init(canvasRoot: Node) {
+        this.layerNodes.clear();
+        Object.values(UILayer).forEach((layerName) => {
+            let layerNode = new Node(layerName);
+            canvasRoot.addChild(layerNode);
+            // 讓層級自動撐滿全螢幕等設定可以依需求加在這裡
+            this.layerNodes.set(layerName as UILayer, layerNode);
+        });
+    }
+
+    /**
+     * 顯示 UI (帶快取與層級管理)
+     * @param bundleName 資源包名稱
+     * @param prefabName 預製體名稱或路徑
+     * @param componentClass UI Controller 類別
+     * @param layer 顯示層級
+     */
+    public showUI<T extends BaseUIController>(
+        bundleName: string,
+        prefabName: string,
+        componentClass: { new (): T },
+        layer: UILayer = UILayer.View,
+    ): T {
+        let cacheKey = `${bundleName}_${prefabName}`;
+        let uiController = this.uiCache.get(cacheKey) as T;
+
+        if (!uiController) {
+            // 如果快取中沒有，則新建
+            uiController = this.createComponentFromBundle(bundleName, prefabName, componentClass);
+            this.uiCache.set(cacheKey, uiController);
+        }
+
+        let parentNode = this.layerNodes.get(layer);
+        if (parentNode) {
+            uiController.node.setParent(parentNode);
+        } else {
+            console.warn(
+                `UIManager: UI Layer ${layer} not initialized! Attaching to director scene.`,
+            );
+            director.getScene()?.addChild(uiController.node);
+        }
+
+        uiController.node.active = true;
+        return uiController;
+    }
+
+    /**
+     * 關閉並隱藏 UI
+     * @param bundleName 資源包名稱
+     * @param prefabName 預製體名稱或路徑
+     */
+    public closeUI(bundleName: string, prefabName: string) {
+        let cacheKey = `${bundleName}_${prefabName}`;
+        let uiController = this.uiCache.get(cacheKey);
+
+        if (uiController) {
+            uiController.node.active = false;
+        }
+    }
+
+    /**
+     * 異步顯示 UI (自動處理資源包載入與創建)
+     * @param bundleName 資源包名稱
+     * @param prefabName 預製體名稱或路徑
+     * @param componentClass UI Controller 類別
+     * @param layer 顯示層級
+     */
+    public async showUIAsync<T extends BaseUIController>(
+        bundleName: string,
+        prefabName: string,
+        componentClass: { new (): T },
+        layer: UILayer = UILayer.View,
+    ): Promise<T> {
+        // 1. 確保 Bundle 已載入
+        await ResManager.getInstance().loadBundleAsync(bundleName);
+
+        // 2. 呼叫同步的 showUI (內含快取邏輯)
+        return this.showUI(bundleName, prefabName, componentClass, layer);
     }
 }

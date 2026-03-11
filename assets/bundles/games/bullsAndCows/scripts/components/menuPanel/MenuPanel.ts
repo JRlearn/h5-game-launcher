@@ -1,36 +1,32 @@
 import { _decorator, EditBox } from 'cc';
 import { BaseUIController } from '../../../../../../scripts/framework/ui/BaseUIController';
+
 const { ccclass } = _decorator;
 
 @ccclass('MenuPanel')
 export class MenuPanel extends BaseUIController {
-    private onChangeTextCallback: (value: string) => void;
-    private onClickCreateGameBtnCallback: () => void;
-    private onClickJoinGameBtnCallback: () => void;
-    private onClickSettingBtnCallback: () => void;
+    private onChangeTextCallback: (value: string) => void = () => {};
+    private onClickCreateGameBtnCallback: () => void = () => {};
+    private onClickJoinGameBtnCallback: () => void = () => {};
+    private onClickSettingBtnCallback: () => void = () => {};
 
     /** 初始化 */
     public init() {
         super.init();
-        console.log(this.views);
 
-        this.getNode('MenuPanel/Options/EditBox').on(
+        this.getNode('MenuPanel/Options/EditBox')?.on(
             EditBox.EventType.TEXT_CHANGED,
-            (data: EditBox) => {
-                this.onChangeText(data.string);
-            },
+            (data: EditBox) => this.onChangeTextCallback?.(data.string),
         );
 
         this.bindButtonEvent('MenuPanel/Options/CreateGameBtn', () => {
-            this.onClickCreateGameBtn();
+            this.onClickCreateGameBtnCallback?.();
         });
-
         this.bindButtonEvent('MenuPanel/Options/JoinGameBtn', () => {
-            this.onClickJoinGameBtn();
+            this.onClickJoinGameBtnCallback?.();
         });
-
         this.bindButtonEvent('MenuPanel/SettingBtn', () => {
-            this.onClickSettingBtn();
+            this.onClickSettingBtnCallback?.();
         });
     }
 
@@ -48,21 +44,5 @@ export class MenuPanel extends BaseUIController {
 
     public setOnClickSettingBtnCallback(callback: () => void) {
         this.onClickSettingBtnCallback = callback;
-    }
-
-    private onClickJoinGameBtn() {
-        this.onClickJoinGameBtnCallback?.();
-    }
-
-    private onChangeText(value: string) {
-        this.onChangeTextCallback?.(value);
-    }
-
-    private onClickCreateGameBtn() {
-        this.onClickCreateGameBtnCallback?.();
-    }
-
-    private onClickSettingBtn() {
-        this.onClickSettingBtnCallback?.();
     }
 }

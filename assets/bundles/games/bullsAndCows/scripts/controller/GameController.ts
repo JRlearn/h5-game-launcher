@@ -1,13 +1,12 @@
 import { GameControllerBase } from '../../../../../scripts/framework/mvc/controller/GameControllerBase';
 import { GameView } from '../view/GameView';
 import { GameModel } from '../model/GameModel';
-import { EventManager } from '../../../../../scripts/manager/system/EventManager';
 import { StateMachine } from '../../../../../scripts/framework/stateMachine/StateMachine';
 import { IdelState } from '../states/IdelState';
 import { SetupState } from '../states/SetupState';
 import { GuessState } from '../states/GuessingState';
 import { ResultState } from '../states/ResultState';
-import { SoundManager } from '../../../../../scripts/manager/system/SoundManager';
+import { SoundManager } from '../../../../../scripts/manager/audio/SoundManager';
 import { WebSocketManager } from '../../../../../scripts/manager/network/WebSocketManager';
 import {
     CreateRoomMessage,
@@ -16,7 +15,6 @@ import {
     GuessMessage,
     LeaveMessage,
     WSMessage,
-    MessageType,
     PlayAgainMessage,
 } from '../net/MessageTypes';
 import { IWebSocketHandler } from '../../../../../scripts/manager/network/WebSocketConnector';
@@ -141,7 +139,7 @@ export class GameController
         console.log('onReciveSyncGuessCountMessage:', data);
         const result = data.result;
         const guess = data.guess.join('');
-        this.view.guessNumberPanel.showTost(`對手猜第${data.count}次! [${guess} >> ${result} ] `);
+        this.view.guessNumberPanel.showToast(`對手猜第${data.count}次! [${guess} >> ${result} ] `);
     }
 
     public onReciveWaitingResultMessage(data: any): void {

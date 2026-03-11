@@ -1,29 +1,28 @@
 import { _decorator, EditBox, tween, Vec3 } from 'cc';
 import { BaseUIController } from '../../../../../../scripts/framework/ui/BaseUIController';
+
 const { ccclass } = _decorator;
 
 @ccclass('JoinGamePanel')
 export class JoinGamePanel extends BaseUIController {
     private isAnimPlaying: boolean = false;
-    private onChangeTextCallback: (value: string) => void;
-    private onClickCancelBtnCallback: () => void;
-    private onClickConfirmBtnCallback: () => void;
+    private onChangeTextCallback: (value: string) => void = () => {};
+    private onClickCancelBtnCallback: () => void = () => {};
+    private onClickConfirmBtnCallback: () => void = () => {};
 
     /** 初始化 */
     public init() {
         super.init();
-        this.getNode('JoinGamePanel/Content/RoomID/EditBox').on(
+        this.getNode('JoinGamePanel/Content/RoomID/EditBox')?.on(
             EditBox.EventType.TEXT_CHANGED,
-            (data: EditBox) => {
-                this.onChangeText(data.string);
-            },
+            (data: EditBox) => this.onChangeTextCallback?.(data.string),
         );
 
         this.bindButtonEvent('JoinGamePanel/Content/ConfirmBtn', () => {
-            this.onClickConfirmBtn();
+            this.onClickConfirmBtnCallback?.();
         });
         this.bindButtonEvent('JoinGamePanel/Content/CancelBtn', () => {
-            this.onClickCancelBtn();
+            this.onClickCancelBtnCallback?.();
         });
     }
 
@@ -46,7 +45,7 @@ export class JoinGamePanel extends BaseUIController {
 
         this.node.active = true;
         const contentNode = this.getNode('JoinGamePanel/Content');
-        contentNode.setScale(new Vec3(0, 0, 0));
+        contentNode?.setScale(new Vec3(0, 0, 0));
         tween(contentNode)
             .to(0.3, { scale: new Vec3(1, 1, 1) }, { easing: 'backOut' })
             .call(() => {
@@ -68,17 +67,5 @@ export class JoinGamePanel extends BaseUIController {
                 this.isAnimPlaying = false;
             })
             .start();
-    }
-
-    private onChangeText(value: string) {
-        this.onChangeTextCallback?.(value);
-    }
-
-    private onClickConfirmBtn() {
-        this.onClickConfirmBtnCallback?.();
-    }
-
-    private onClickCancelBtn() {
-        this.onClickCancelBtnCallback?.();
     }
 }

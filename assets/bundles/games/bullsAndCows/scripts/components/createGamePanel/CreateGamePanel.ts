@@ -1,17 +1,18 @@
 import { _decorator, tween, Vec3 } from 'cc';
 import { BaseUIController } from '../../../../../../scripts/framework/ui/BaseUIController';
+
 const { ccclass } = _decorator;
 
 @ccclass('CreateGamePanel')
 export class CreateGamePanel extends BaseUIController {
     private isAnimPlaying: boolean = false;
-    private onClickCancelBtnCallback: () => void;
+    private onClickCancelBtnCallback: () => void = () => {};
 
     /** 初始化 */
     public init() {
         super.init();
         this.bindButtonEvent('CreateGamePanel/Content/CancelBtn', () => {
-            this.onClickCancelBtn();
+            this.onClickCancelBtnCallback?.();
         });
     }
 
@@ -26,7 +27,7 @@ export class CreateGamePanel extends BaseUIController {
 
         this.node.active = true;
         const contentNode = this.getNode('CreateGamePanel/Content');
-        contentNode.setScale(new Vec3(0, 0, 0));
+        contentNode?.setScale(new Vec3(0, 0, 0));
         tween(contentNode)
             .to(0.3, { scale: new Vec3(1, 1, 1) }, { easing: 'backOut' })
             .call(() => {
@@ -52,10 +53,8 @@ export class CreateGamePanel extends BaseUIController {
 
     public setRoomID(value: string) {
         const label = this.getLabel('CreateGamePanel/Content/RoomID/Label');
-        label.string = value;
-    }
-
-    private onClickCancelBtn() {
-        this.onClickCancelBtnCallback?.();
+        if (label) {
+            label.string = value;
+        }
     }
 }

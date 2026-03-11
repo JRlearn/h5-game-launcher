@@ -16,9 +16,8 @@ description: 透過複製模板文件夾創建新子遊戲項目的工作流。
 
 2.  **驗證結構**:
     確保新文件夾 `assets/bundles/games/GAME_NAME` 包含預期的基礎結構：
-    *   `/prefabs`
+    *   `/prefabs/entry/main.prefab` (統一入口)
     *   `/resources`
-    *   `/scenes/Scene.scene`
     *   `/scripts/components/`
     *   `/scripts/controller/`
     *   `/scripts/model/`

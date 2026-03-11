@@ -60,7 +60,7 @@ export class BaseUIController extends Component {
      */
     protected bindButtonEvent(path: string, callback: () => void) {
         const node = this.getNode(path);
-        node.on(Button.EventType.CLICK, callback);
+        node?.on(Button.EventType.CLICK, callback);
     }
 
     /** 快速取得 Node */

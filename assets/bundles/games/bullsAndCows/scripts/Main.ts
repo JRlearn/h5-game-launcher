@@ -2,58 +2,90 @@ import { _decorator, Component } from 'cc';
 import { GameController } from './controller/GameController';
 import { GameModel } from './model/GameModel';
 import { GameView } from './view/GameView';
-
-import { ResManager } from '../../../../scripts/manager/resource/ResManager';
 import { WebSocketManager } from '../../../../scripts/manager/network/WebSocketManager';
-const { ccclass, property } = _decorator;
+import { ResManager } from '../../../../scripts/manager/resource/ResManager';
+import { LogManager } from '../../../../scripts/manager/core/LogManager';
 
+const { ccclass } = _decorator;
+
+/** Bundle 名稱 */
+const BUNDLE_NAME = 'games/bullsAndCows';
+
+/**
+ * 此遊戲需要的所有 UI Prefab 路徑（Bundle 內相對路徑）
+ * 在建立 GameView 前，必須先透過 ResManager.loadPrefabsAsync 載入快取，
+ * 否則 GameView.init() 中的 createComponent 會因快取為空而失敗。
+ */
+const REQUIRED_UI_PREFABS = [
+    'prefabs/GuessNumPanel',
+    'prefabs/LaLaKeyboardPanel',
+    'prefabs/MenuPanel',
+    'prefabs/CreateGamePanel',
+    'prefabs/JoinGamePanel',
+    'prefabs/SetupGuessPanel',
+    'prefabs/ResultPanel',
+    'prefabs/Toast',
+    'prefabs/WaitingMask',
+];
+
+/**
+ * 遊戲模組進入點（bullsAndCows）
+ *
+ * 初始化序列：
+ * onLoad → initAsync()
+ *   └── preloadUIResources()   ← 按需預載所有 UI Prefab（並行）
+ *   └── new GameView()         ← Prefab 皆已在快取，同步建立
+ *   └── controller.init()
+ *   └── conectToServer()
+ *   └── controller.start()
+ */
 @ccclass('Main')
 export class Main extends Component {
-    private controller: GameController;
-    private model: GameModel;
-    private view: GameView;
+    private controller!: GameController;
+    private model!: GameModel;
+    private view!: GameView;
 
     protected onLoad(): void {
-        this.model = new GameModel(); // 初始化模型
-        this.view = new GameView(this.node); // 初始化視
-        this.controller = new GameController(this.view, this.model); // 初始化控制器
+        this.initAsync();
     }
 
-    protected start() {
-        console.log('資源加載中...');
+    private async initAsync(): Promise<void> {
+        try {
+            LogManager.getInstance().info('BullsAndCows', '⏳ 預載 UI 資源中...');
 
-        this.loadResources(); // 加載資源
+            await this.preloadUIResources();
+
+            LogManager.getInstance().info('BullsAndCows', '✅ UI 資源預載完成，初始化 MVC...');
+
+            this.model = new GameModel();
+            this.view = new GameView(this.node);
+            this.view.init();
+
+            this.controller = new GameController(this.view, this.model);
+            this.controller.init();
+
+            this.conectToServer();
+            this.controller.start();
+        } catch (err) {
+            LogManager.getInstance().error('BullsAndCows', '❌ 遊戲初始化失敗', err);
+        }
     }
 
-    protected conectToServer() {
-        console.log('連接到伺服器...');
+    /**
+     * 按需預載所有 UI Prefab（並行執行）
+     * Bundle 在 SceneManager.enterGame 時已完成 manifest 載入，
+     * 這裡直接對各 Prefab 路徑發出並行下載請求並寫入快取。
+     */
+    private async preloadUIResources(): Promise<void> {
+        await ResManager.getInstance().loadPrefabsAsync(BUNDLE_NAME, REQUIRED_UI_PREFABS);
+    }
+
+    private conectToServer(): void {
+        LogManager.getInstance().info('BullsAndCows', '🔌 連接到伺服器...');
         WebSocketManager.getInstance().register(
             'bullsAndCows',
             'ws://127.0.0.1:8082',
             this.controller,
         );
-        // WebSocketManager.getInstance().register(
-        //     'bullsAndCows',
-        //     'ws://localhost:8082',
-        //     this.controller,
-        // );
-    }
-
-    protected loadResources() {
-        console.log('資源加載中...');
-        ResManager.getInstance().loadBundle(
-            'bullsAndCows',
-            () => {
-                console.log('資源包加載完成'); // 資源包加載完成回調
-                this.gameStart(); // 開始遊戲
-            }, // 加載資源包
-        );
-    }
-
-    protected gameStart() {
-        console.log('遊戲開始');
-        this.controller.init(); // 初始化控制器
-        this.conectToServer(); // 連接伺服器
-        this.controller.start(); // 開始遊戲
     }
 }

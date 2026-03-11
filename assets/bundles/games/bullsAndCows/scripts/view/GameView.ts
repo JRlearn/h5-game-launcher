@@ -1,5 +1,6 @@
 import { Component, Node } from 'cc';
 import { UIManager } from '../../../../../scripts/manager/ui/UIManager';
+import { BaseUIController } from '../../../../../scripts/framework/ui/BaseUIController';
 import { GuessNumPanel } from '../components/guessNumberPanel/GuessNumPanel';
 import { MenuPanel } from '../components/menuPanel/MenuPanel';
 import { CreateGamePanel } from '../components/createGamePanel/CreateGamePanel';
@@ -9,140 +10,81 @@ import { SetupGuessPanel } from '../components/setupGuessPanel/SetupGuessPanel';
 import { ResultPanel } from '../components/resultPanel/ResultPanel';
 import { WaitingMask } from '../components/waitingMask/WaitingMask';
 import { LaLaKeyboardPanel } from '../components/keyboard/LaLaKeyboardPanel';
+
+/** 這個遊戲 Bundle 名稱（供 createComponent 使用） */
+const BUNDLE_NAME = 'games/bullsAndCows';
+
+/**
+ * GameView - 純 View 層
+ *
+ * 職責：建立並持有所有 UI 組件。
+ * 資源預載（loadPrefabsAsync）已移至 Main.ts 的 initAsync() 流程，
+ * 確保在 init() 被呼叫前所有 Prefab 已存在快取中。
+ */
 export class GameView {
-    protected canvas: Node; // 根節點
-    public menuPanel: MenuPanel; // 菜單面板組件
-    public createGamePanel: CreateGamePanel; // 創建遊戲面板組件
-    public joinGamePanel: JoinGamePanel; // 加入遊戲面板組件
-    public guessNumberPanel: GuessNumPanel; // 猜數字面板組件
-    public keyboardPanel: LaLaKeyboardPanel; // 鍵盤組件
-    public setupGuessPanel: SetupGuessPanel; // 設定猜數字面板組件
-    public resultPanel: ResultPanel; // 結算面板組件
-    public toast: Toast; // 提示組件
-    public waitingMask: WaitingMask; // 提示組件
-    constructor(canvas: Node) {
-        this.canvas = canvas;
+    protected root: Node;
+    public menuPanel!: MenuPanel;
+    public createGamePanel!: CreateGamePanel;
+    public joinGamePanel!: JoinGamePanel;
+    public guessNumberPanel!: GuessNumPanel;
+    public keyboardPanel!: LaLaKeyboardPanel;
+    public setupGuessPanel!: SetupGuessPanel;
+    public resultPanel!: ResultPanel;
+    public toast!: Toast;
+    public waitingMask!: WaitingMask;
+
+    constructor(root: Node) {
+        this.root = root;
     }
 
-    /** 初始化 */
+    /** 初始化（同步，need Prefabs already in cache） */
     public init() {
-        this.registerPrefabCtr();
-        // 創建猜數字面板組件
-        this.guessNumberPanel = this.createGuessNumPanel();
-        this.addChild(this.guessNumberPanel); // 將猜數字面板組件添加到根節點
+        this.guessNumberPanel = this.createComponent('GuessNumPanel', GuessNumPanel);
+        this.guessNumberPanel.init();
+        this.addChild(this.guessNumberPanel);
 
-        // 創建鍵盤組件
-        this.keyboardPanel = this.createKeyboardPanel();
+        this.keyboardPanel = this.createComponent('LaLaKeyboardPanel', LaLaKeyboardPanel);
+        this.keyboardPanel.init();
         this.addChild(this.keyboardPanel);
 
-        this.menuPanel = this.createMenuPanelComponent();
-        this.addChild(this.menuPanel); // 將菜單面板組件添加到根節點
+        this.menuPanel = this.createComponent('MenuPanel', MenuPanel);
+        this.menuPanel.init();
+        this.addChild(this.menuPanel);
 
-        //創建創建遊戲面板
-        this.createGamePanel = this.createCreateGamePanelComponent();
-        this.addChild(this.createGamePanel); // 將菜單面板組件添加到根節點
+        this.createGamePanel = this.createComponent('CreateGamePanel', CreateGamePanel);
+        this.createGamePanel.init();
+        this.addChild(this.createGamePanel);
 
-        //創建加入遊戲面板
-        this.joinGamePanel = this.createJoinGamePanelComponent();
-        this.addChild(this.joinGamePanel); // 將菜單面板組件添加到根節點
+        this.joinGamePanel = this.createComponent('JoinGamePanel', JoinGamePanel);
+        this.joinGamePanel.init();
+        this.addChild(this.joinGamePanel);
 
-        //創建設定猜數字面板
-        this.setupGuessPanel = this.createSetupGuessPanelComponent();
-        this.addChild(this.setupGuessPanel); // 將菜單面板組件添加到根節點
+        this.setupGuessPanel = this.createComponent('SetupGuessPanel', SetupGuessPanel);
+        this.setupGuessPanel.init();
+        this.addChild(this.setupGuessPanel);
 
-        //創建結算面板
-        this.resultPanel = this.createResultPanelComponent();
-        this.addChild(this.resultPanel); // 將菜單面板組件添加到根節點
+        this.resultPanel = this.createComponent('ResultPanel', ResultPanel);
+        this.resultPanel.init();
+        this.addChild(this.resultPanel);
 
-        //創建Toast面板
-        this.toast = this.createToastComponent();
-        this.addChild(this.toast); // 將菜單面板組件添加到根節點
+        this.toast = this.createComponent('Toast', Toast);
+        this.toast.init();
+        this.toast.node.y = -140;
+        this.addChild(this.toast);
 
-        this.waitingMask = this.cerateWaitiingMask();
+        this.waitingMask = this.createComponent('WaitingMask', WaitingMask);
+        this.waitingMask.init();
         this.addChild(this.waitingMask);
     }
 
-    private registerPrefabCtr() {
-        UIManager.getInstance().registerPrefabCtr(GuessNumPanel, 'GuessNumPanel');
-        UIManager.getInstance().registerPrefabCtr(LaLaKeyboardPanel, 'LaLaKeyboardPanel');
-        UIManager.getInstance().registerPrefabCtr(MenuPanel, 'MenuPanel');
-        UIManager.getInstance().registerPrefabCtr(CreateGamePanel, 'CreateGamePanel');
-        UIManager.getInstance().registerPrefabCtr(JoinGamePanel, 'JoinGamePanel');
-        UIManager.getInstance().registerPrefabCtr(Toast, 'Toast');
-        UIManager.getInstance().registerPrefabCtr(SetupGuessPanel, 'SetupGuessPanel');
-        UIManager.getInstance().registerPrefabCtr(ResultPanel, 'ResultPanel');
-        UIManager.getInstance().registerPrefabCtr(WaitingMask, 'WaitingMask');
+    private createComponent<T extends BaseUIController>(
+        prefabName: string,
+        ComponentClass: new () => T,
+    ): T {
+        return UIManager.getInstance().createComponent(BUNDLE_NAME, prefabName, ComponentClass);
     }
 
-    /** 創建猜數字面板組件 */
-    private createGuessNumPanel() {
-        const component = UIManager.getInstance().createComponent(GuessNumPanel);
-        component.init();
-        return component;
-    }
-
-    /** 創建鍵盤組件 */
-    private createKeyboardPanel() {
-        const component = UIManager.getInstance().createComponent(LaLaKeyboardPanel);
-        component.init();
-        return component;
-    }
-
-    /** 創建菜單面板組件 */
-    private createMenuPanelComponent() {
-        const component = UIManager.getInstance().createComponent(MenuPanel);
-        component.init();
-        return component;
-    }
-
-    private createCreateGamePanelComponent() {
-        // 註冊預製體類型與名稱的對應關係
-        const component = UIManager.getInstance().createComponent(CreateGamePanel);
-        component.init();
-        return component;
-    }
-
-    private createJoinGamePanelComponent() {
-        // 註冊預製體類型與名稱的對應關係
-        const component = UIManager.getInstance().createComponent(JoinGamePanel);
-        component.init();
-        return component;
-    }
-
-    private createToastComponent() {
-        // 註冊預製體類型與名稱的對應關係
-        const component = UIManager.getInstance().createComponent(Toast);
-        component.init();
-        component.node.y = -140; // 設置位置
-        return component;
-    }
-
-    private createSetupGuessPanelComponent() {
-        // 註冊預製體類型與名稱的對應關係
-        const component = UIManager.getInstance().createComponent(SetupGuessPanel);
-        component.init();
-        return component;
-    }
-
-    private createResultPanelComponent() {
-        // 註冊預製體類型與名稱的對應關係
-        const component = UIManager.getInstance().createComponent(ResultPanel);
-        component.init();
-        return component;
-    }
-
-    private cerateWaitiingMask() {
-        // 註冊預製體類型與名稱的對應關係
-        const component = UIManager.getInstance().createComponent(WaitingMask);
-        component.init();
-        return component;
-    }
-
-    /**
-     * 加組件到canvas
-     * @param component 組件
-     */
     protected addChild(component: Component) {
-        this.canvas.addChild(component.node); // 將節點添加到根節點
+        this.root.addChild(component.node);
     }
 }

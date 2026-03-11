@@ -3,37 +3,41 @@ import { BaseUIController } from '../../../../../../scripts/framework/ui/BaseUIC
 import { HistoryScrollView } from './HistoryScrollView';
 import { UIManager } from 'db://assets/scripts/manager/ui/UIManager';
 import { Toast } from '../toast/Toast';
+
 const { ccclass } = _decorator;
+
 type HistoryItemData = {
     guess: string; // 玩家猜的數字
     result: string; // 回饋 (例如 1A2B)
 };
+
 @ccclass('GuessNumPanel')
 export class GuessNumPanel extends BaseUIController {
-    private toast: Toast;
-    private historyScrollView: HistoryScrollView;
+    private toast!: Toast;
+    private historyScrollView: HistoryScrollView | null = null;
     private numLabels: Label[] = [];
     private frames: Node[] = [];
-    private onClickNumBtnCallback: (index: number) => void;
-    private onClickLeaveBtnCallback: () => void; // 點擊離開按鈕的回調函數
+    private onClickNumBtnCallback: (index: number) => void = () => {};
+    private onClickLeaveBtnCallback: () => void = () => {};
 
     /** 初始化 */
     public init() {
         super.init();
+
         for (let index = 0; index < 4; index++) {
             this.bindButtonEvent(`GuessNumPanel/GuessNumberNode/Item${index}`, () => {
-                this.onClickNumBtn(index);
+                this.onClickNumBtnCallback?.(index);
             });
 
             const label = this.getLabel(`GuessNumPanel/GuessNumberNode/Item${index}/Num`);
-            this.numLabels.push(label);
+            if (label) this.numLabels.push(label);
 
             const frame = this.getNode(`GuessNumPanel/GuessNumberNode/Item${index}/Frame`);
-            this.frames.push(frame);
+            if (frame) this.frames.push(frame);
         }
 
         this.bindButtonEvent('GuessNumPanel/BtnsNode/LeaveBtn', () => {
-            this.onClickLeaveBtn(); // 點擊離開按鈕的回調函數
+            this.onClickLeaveBtnCallback?.();
         });
 
         this.historyScrollView = this.createHistoryScrollView();
@@ -42,19 +46,19 @@ export class GuessNumPanel extends BaseUIController {
     }
 
     public updateScrollViewData(data: HistoryItemData[]) {
-        this.historyScrollView.updateUI(data); // 更新歷史數據
+        this.historyScrollView?.updateUI(data);
     }
 
     public addScrollViewItem(data: HistoryItemData) {
-        this.historyScrollView.addItem(data); // 更新歷史數據
+        this.historyScrollView?.addItem(data);
     }
 
     public clearScrollerView() {
-        this.historyScrollView.clearAll();
+        this.historyScrollView?.clearAll();
     }
 
     /**
-     * 設定按鈕的回調函數
+     * 設定數字按鈕的回調函數
      * @param callback 回調函數，傳入按鈕的索引值
      */
     public setOnClickNumBtnCallback(callback: (index: number) => void) {
@@ -63,7 +67,6 @@ export class GuessNumPanel extends BaseUIController {
 
     /**
      * 設定離開按鈕的回調函數
-     * @param callback 回調函數，傳入按鈕的索引值
      */
     public setOnClickLeaveBtnCallback(callback: () => void) {
         this.onClickLeaveBtnCallback = callback;
@@ -71,13 +74,10 @@ export class GuessNumPanel extends BaseUIController {
 
     /**
      * 設定猜的號碼
-     * @param nums 猜的號碼
+     * @param nums 猜的號碼陣列
      */
     public setGuessNumbers(nums: string[]) {
-        for (let index = 0; index < this.numLabels.length; index++) {
-            const value = nums[index] || '';
-            this.setGuessNumberByIndex(index, value);
-        }
+        this.numLabels.forEach((_, index) => this.setGuessNumberByIndex(index, nums[index] ?? ''));
     }
 
     /**
@@ -86,34 +86,23 @@ export class GuessNumPanel extends BaseUIController {
      * @param value 值
      */
     public setGuessNumberByIndex(index: number, value: string) {
-        const label = this.numLabels[index];
-        label.string = value;
+        this.numLabels[index].string = value;
     }
 
     /**
-     * 設定按鈕的顯示狀態(選中開frame或未選中則關閉frame)
+     * 設定按鈕的選中狀態 (選中的顯示 Frame，其餘隱藏)
      * @param index 按鈕索引值
      */
     public setFrameSelected(index: number) {
-        for (let i = 0; i < this.frames.length; i++) {
-            const frame = this.frames[i];
-            frame.active = i == index;
-        }
+        this.frames.forEach((frame, i) => (frame.active = i === index));
     }
 
     /**
-     * 設定所有Frame的顯示
+     * 設定所有 Frame 的顯示狀態
      * @param isVisible 是否可見
      */
     public setAllFrameVisible(isVisible: boolean) {
-        for (let i = 0; i < this.frames.length; i++) {
-            this.setFrameVisible(i, isVisible);
-        }
-    }
-
-    public showTost(text: string) {
-        this.toast.show();
-        this.toast.playFadeInAndOut(text);
+        this.frames.forEach((frame) => (frame.active = isVisible));
     }
 
     /**
@@ -122,40 +111,28 @@ export class GuessNumPanel extends BaseUIController {
      * @param isVisible 是否可見
      */
     public setFrameVisible(index: number, isVisible: boolean) {
-        const frame = this.frames[index];
-        frame.active = isVisible;
+        this.frames[index].active = isVisible;
     }
 
     /**
      * 清空猜的號碼
      */
     public clearGuessNumber() {
-        for (let index = 0; index < this.numLabels.length; index++) {
-            const label = this.numLabels[index];
-            label.string = '';
-        }
+        this.numLabels.forEach((label) => (label.string = ''));
     }
 
-    /**
-     * 按鈕點擊事件
-     * @param index 按鈕索引值
-     */
-    private onClickNumBtn(index: number) {
-        this.onClickNumBtnCallback?.(index);
+    public showToast(text: string) {
+        this.toast.show();
+        this.toast.playFadeInAndOut(text);
     }
 
-    private onClickLeaveBtn() {
-        this.onClickLeaveBtnCallback?.();
-    }
-
-    private createHistoryScrollView() {
+    private createHistoryScrollView(): HistoryScrollView | null {
         const scrollView = this.getScrollView('GuessNumPanel/HistoryScrollView');
-        const historyScrollView = new HistoryScrollView(scrollView);
-        return historyScrollView;
+        return scrollView ? new HistoryScrollView(scrollView) : null;
     }
 
-    private createToast() {
-        const component = UIManager.getInstance().createComponent(Toast);
+    private createToast(): Toast {
+        const component = UIManager.getInstance().createComponent('bullsAndCows', 'Toast', Toast);
         component.init();
         component.node.y = 550;
         return component;

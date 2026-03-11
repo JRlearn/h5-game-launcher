@@ -1,21 +1,21 @@
 import { _decorator } from 'cc';
 import { BaseUIController } from '../../../../../../scripts/framework/ui/BaseUIController';
+
 const { ccclass } = _decorator;
 
 @ccclass('ResultPanel')
 export class ResultPanel extends BaseUIController {
-    private onClickLeaveBtnCallback: () => void;
-    private onClickAgainBtnCallback: () => void;
+    private onClickLeaveBtnCallback: () => void = () => {};
+    private onClickAgainBtnCallback: () => void = () => {};
 
     /** 初始化 */
     public init() {
         super.init();
         this.bindButtonEvent('ResultPanel/BtnsNode/LeaveBtn', () => {
-            this.onClickLeaveBtn();
+            this.onClickLeaveBtnCallback?.();
         });
-
         this.bindButtonEvent('ResultPanel/BtnsNode/AgainBtn', () => {
-            this.onClickAgainBtn();
+            this.onClickAgainBtnCallback?.();
         });
     }
 
@@ -27,28 +27,29 @@ export class ResultPanel extends BaseUIController {
         this.onClickAgainBtnCallback = callback;
     }
 
-    /** 顯示結果面板 */
+    /** 顯示勝利結果面板 */
     public showWin() {
         this.show();
         const winNode = this.getNode('ResultPanel/WinPanel');
+        if (winNode) {
+            winNode.active = true;
+        }
         const loseNode = this.getNode('ResultPanel/LosePanel');
-        winNode.active = true;
-        loseNode.active = false;
+        if (loseNode) {
+            loseNode.active = false;
+        }
     }
 
+    /** 顯示失敗結果面板 */
     public showLose() {
         this.show();
         const winNode = this.getNode('ResultPanel/WinPanel');
+        if (winNode) {
+            winNode.active = false;
+        }
         const loseNode = this.getNode('ResultPanel/LosePanel');
-        winNode.active = false;
-        loseNode.active = true;
-    }
-
-    private onClickLeaveBtn() {
-        this.onClickLeaveBtnCallback?.();
-    }
-
-    private onClickAgainBtn() {
-        this.onClickAgainBtnCallback?.();
+        if (loseNode) {
+            loseNode.active = true;
+        }
     }
 }

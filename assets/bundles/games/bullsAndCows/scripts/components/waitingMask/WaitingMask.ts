@@ -7,6 +7,8 @@ export class WaitingMask extends BaseUIController {
     /** 設置文本 */
     public setText(text: string) {
         const label = this.getLabel('WaitingMask/Notice/Label');
-        label.string = text;
+        if (label) {
+            label.string = text;
+        }
     }
 }
