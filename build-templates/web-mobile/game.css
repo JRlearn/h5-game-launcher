@@ -1,0 +1,6 @@
+/* Game specific styles for ATG platform */
+canvas {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}

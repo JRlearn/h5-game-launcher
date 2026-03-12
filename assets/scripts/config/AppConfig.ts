@@ -1,4 +1,4 @@
-import { LanguageType } from '../utils/i18n/LanguageType';
+import { LanguageType } from '../core/i18n/LanguageType';
 
 /**
  * 應用程式全域設定檔 (AppConfig)
@@ -53,4 +53,17 @@ export class AppConfig {
 
     /** 語系 JSON 檔在 Common Bundle 中的存放目錄路徑 */
     public static readonly I18N_DIR = 'i18n/';
+
+    // ==========================================
+    // UI 與 相機 相關配置
+    // ==========================================
+
+    /** 相機預設 Z 軸位置 */
+    public static readonly CAMERA_Z = 1000;
+    /** 相機預設背景顏色 (RGBA) - 使用暗藍色以便區分渲染狀態 */
+    public static readonly CAMERA_CLEAR_COLOR = { r: 30, g: 30, b: 50, a: 255 };
+    /** 預設 UI 設計解析度寬度 */
+    public static readonly DESIGN_WIDTH = 720;
+    /** 預設 UI 設計解析度高度 */
+    public static readonly DESIGN_HEIGHT = 1280;
 }

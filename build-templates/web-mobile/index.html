@@ -1,255 +1,108 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-8">
     <title>%COCOS_WINDOW_TITLE%</title>
-    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="full-screen" content="yes" />
-    <meta name="screen-orientation" content="portrait" />
-    <meta name="x5-fullscreen" content="true" />
-    <meta name="360-fullscreen" content="true" />
 
-    <!--
-        Resource Hints: 在 HTML 解析 <head> 時就並行預取關鍵資源，
-        縮短 Waterfall 空白（cc.js 執行阻塞 index.js 請求的間隔）。
+    <!-- Favicon & PWA icons -->
+    <link rel="icon" href="./public/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="./public/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./public/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./public/favicon-16x16.png">
+    <link rel="manifest" href="./nexus.json">
+    <link rel="mask-icon" href="./public/safari-pinned-tab.svg" color="#5bbad5">
+    <meta name="theme-color" content="#5bbad5">
+    <meta name="msapplication-TileColor" content="#da532c">
 
-        Cocos 3.x 的輸出檔名固定，可安全預載：
-        - index.js       → 遊戲主進入點
-        - cc.js          → Cocos 引擎核心 (最大，優先預取)
-        - application.js → 應用程式啟動器
-    -->
-    <link rel="preload" href="index.js" as="script" />
-    <link rel="preload" href="cocos-js/cc.js" as="script" />
-    <link rel="preload" href="src/application.js" as="script" />
-    <!-- 預連線 CDN / 資源伺服器（填入實際 origin） -->
-    <!-- <link rel="preconnect" href="https://your-cdn.example.com" /> -->
+    <!-- Mobile / viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
 
+    <!-- Browser & rendering hacks -->
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="x5-page-mode" content="app">
+    <meta name="full-screen" content="yes">
+    <meta name="x5-fullscreen" content="true">
+    <meta name="360-fullscreen" content="true">
 
-    <style>
-        /* ========== Reset & Base ========== */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="game.css">
 
-        html, body {
-            width: 100%; height: 100%;
-            overflow: hidden;
-            background: #0a0a12;
-            font-family: 'Segoe UI', 'PingFang TC', 'Noto Sans TC', sans-serif;
-        }
-
-        canvas { outline: none; }
-
-        /* ========== 引擎啟動 Loading 遮罩 ========== */
-        #splash-screen {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(ellipse at 50% 40%, #1a1a2e 0%, #0a0a12 70%);
-            transition: opacity 0.6s ease;
-        }
-
-        #splash-screen.fade-out {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        /* Logo / 標題 */
-        .splash-logo {
-            font-size: 2.4rem;
-            font-weight: 700;
-            letter-spacing: 0.12em;
-            background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.4rem;
-            animation: pulse-logo 2.4s ease-in-out infinite;
-        }
-
-        .splash-subtitle {
-            font-size: 0.85rem;
-            color: #6b7280;
-            letter-spacing: 0.3em;
-            text-transform: uppercase;
-            margin-bottom: 3rem;
-        }
-
-        @keyframes pulse-logo {
-            0%, 100% { filter: brightness(1); }
-            50%       { filter: brightness(1.25) drop-shadow(0 0 20px rgba(167,139,250,0.4)); }
-        }
-
-        /* ========== 跑馬燈 Ticker ========== */
-        .ticker-wrapper {
-            width: 100%;
-            max-width: 480px;
-            overflow: hidden;
-            border-top: 1px solid rgba(167,139,250,0.2);
-            border-bottom: 1px solid rgba(167,139,250,0.2);
-            padding: 10px 0;
-            margin-bottom: 2.5rem;
-            position: relative;
-        }
-
-        /* 左右漸層遮罩 */
-        .ticker-wrapper::before,
-        .ticker-wrapper::after {
-            content: '';
-            position: absolute;
-            top: 0; bottom: 0;
-            width: 60px;
-            z-index: 1;
-        }
-        .ticker-wrapper::before {
-            left: 0;
-            background: linear-gradient(to right, #0a0a12, transparent);
-        }
-        .ticker-wrapper::after {
-            right: 0;
-            background: linear-gradient(to left, #0a0a12, transparent);
-        }
-
-        .ticker-track {
-            display: flex;
-            white-space: nowrap;
-            animation: ticker-scroll 18s linear infinite;
-            will-change: transform;
-        }
-
-        .ticker-item {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4em;
-            font-size: 0.78rem;
-            color: #9ca3af;
-            padding: 0 2.5rem;
-            letter-spacing: 0.05em;
-        }
-
-        .ticker-item .dot {
-            width: 5px; height: 5px;
-            border-radius: 50%;
-            background: #a78bfa;
-            flex-shrink: 0;
-        }
-
-        @keyframes ticker-scroll {
-            0%   { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-
-        /* ========== 進度條 ========== */
-        .progress-bar-wrapper {
-            width: 260px;
-            height: 3px;
-            background: rgba(255,255,255,0.08);
-            border-radius: 99px;
-            overflow: hidden;
-            margin-bottom: 1rem;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            width: 0%;
-            border-radius: 99px;
-            background: linear-gradient(90deg, #a78bfa, #60a5fa);
-            transition: width 0.3s ease;
-            box-shadow: 0 0 8px rgba(167,139,250,0.6);
-            animation: shimmer 1.6s linear infinite;
-            background-size: 200% 100%;
-            background-image: linear-gradient(90deg, #a78bfa 0%, #60a5fa 50%, #a78bfa 100%);
-        }
-
-        @keyframes shimmer {
-            0%   { background-position: 200% center; }
-            100% { background-position: -200% center; }
-        }
-
-        .loading-hint {
-            font-size: 0.72rem;
-            color: #4b5563;
-            letter-spacing: 0.15em;
-            animation: blink 1.4s ease-in-out infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50%       { opacity: 0.35; }
-        }
-
-        /* 角落版本資訊 */
-        .version-tag {
-            position: fixed;
-            bottom: 1.2rem;
-            right: 1.2rem;
-            font-size: 0.65rem;
-            color: #374151;
-            letter-spacing: 0.08em;
-        }
-    </style>
+    %COCOS_STYLE%
 </head>
 
 <body>
-    <!-- ========== 引擎初始化 Splash Screen ========== -->
-    <div id="splash-screen">
-        <div class="splash-logo">H5 GAME LAUNCHER</div>
-        <div class="splash-subtitle">LOADING ENGINE</div>
 
-        <!-- 跑馬燈 (兩份相同內容讓循環無縫) -->
-        <div class="ticker-wrapper">
-            <div class="ticker-track" id="ticker-track">
-                <span class="ticker-item"><span class="dot"></span>初始化核心模組</span>
-                <span class="ticker-item"><span class="dot"></span>載入語系資源</span>
-                <span class="ticker-item"><span class="dot"></span>建立遊戲渲染管線</span>
-                <span class="ticker-item"><span class="dot"></span>連線資源伺服器</span>
-                <span class="ticker-item"><span class="dot"></span>更新資源快取</span>
-                <span class="ticker-item"><span class="dot"></span>初始化核心模組</span>
-                <span class="ticker-item"><span class="dot"></span>載入語系資源</span>
-                <span class="ticker-item"><span class="dot"></span>建立遊戲渲染管線</span>
-                <span class="ticker-item"><span class="dot"></span>連線資源伺服器</span>
-                <span class="ticker-item"><span class="dot"></span>更新資源快取</span>
-            </div>
-        </div>
+    <header id="logo">
+        <img src="./public/nexus.png" alt="NEXUS Logo">
+    </header>
 
-        <div class="progress-bar-wrapper">
-            <div class="progress-bar-fill" id="boot-progress"></div>
-        </div>
-        <div class="loading-hint" id="loading-hint">INITIALIZING...</div>
+    <div id="loadingMsg">正在啟動遊戲系統...</div>
+
+    <!-- 自訂進度條 (與 ATG 結構融合) -->
+    <div class="progress-container" id="boot-container">
+        <div class="progress-fill" id="boot-progress"></div>
     </div>
 
-    <div id="version-tag" class="version-tag">v0.1.0</div>
+    <section id="orientation">
+        <div class="icon"></div>
+    </section>
 
-    <!-- ========== Cocos Engine Entry ========== -->
-    %COCOS_STYLE%
+    <div class="blur" id="ui-blur"></div>
+
+    <section id="swipe">
+        <div class="swipe"></div>
+        <div class="fullscreen-icon"></div>
+    </section>
+
+    <main id="GameWrapper">
+        <div id="GameDiv" cc_exact_fit_screen="true">
+            <div id="Cocos3dGameContainer">
+                <canvas id="GameCanvas" oncontextmenu="event.preventDefault()" tabindex="99"></canvas>
+            </div>
+        </div>
+        <div id="version">v0.1.0</div>
+    </main>
+
+    <!-- 初始化觸控事件 hack (PC觸控螢幕) -->
+    <script>
+        if (!('ontouchstart' in document.documentElement)) {
+            document.documentElement.ontouchstart = () => {};
+        }
+
+        // 監聽 Cocos 畫布右鍵 (雖然在新版本結構中已在標籤內處理，但保持 JS 保險)
+        const canvas = document.getElementById('GameCanvas');
+        if (canvas) {
+            canvas.addEventListener('contextmenu', e => e.preventDefault());
+        }
+    </script>
+
+    <!-- 平台邏輯 -->
+    <script src="./app.js"></script>
+
+    <!-- Cocos Creator 腳本入口：會展開為 Polyfills, SystemJS, Import Map 與 index.js 載入邏輯 -->
     %COCOS_SCRIPT%
 
+    <!-- 進度模擬與準備邏輯 -->
     <script>
-        // 當 Cocos 引擎完成初始化時，淡出 Splash Screen
-        window.__onCocosReady = function () {
-            var splash = document.getElementById('splash-screen');
-            if (splash) {
-                splash.classList.add('fade-out');
-                setTimeout(function () {
-                    splash.style.display = 'none';
-                }, 700);
-            }
-        };
-
-        // 模擬引擎載入進度（Cocos 本身不暴露精確進度）
-        (function bootProgress() {
+        (function() {
             var fill = document.getElementById('boot-progress');
-            var hint = document.getElementById('loading-hint');
-            var hints = ['INITIALIZING...', 'LOADING ASSETS...', 'BUILDING PIPELINE...', 'ALMOST READY...'];
+            var hint = document.getElementById('loadingMsg');
+            var logo = document.getElementById('logo');
+            var container = document.getElementById('boot-container');
+            
+            var hints = ['正在初始化核心模組...', '載入語系資源...', '建立渲染管線...', '即將進入遊戲...'];
             var progress = 0;
             var hintIdx = 0;
 
-            var iv = setInterval(function () {
-                // 前 80% 模擬快速進度，80-95% 故意留慢等真實載入完成
-                var increment = progress < 80 ? Math.random() * 4 + 1 : Math.random() * 0.8;
+            var iv = setInterval(function() {
+                var increment = progress < 80 ? Math.random() * 4 + 1 : Math.random() * 0.5;
                 progress = Math.min(progress + increment, 95);
                 if (fill) fill.style.width = progress + '%';
 
@@ -262,16 +115,32 @@
                 if (progress >= 95) clearInterval(iv);
             }, 120);
 
-            // Cocos 就緒後推到 100%
-            var orig = window.__onCocosReady;
-            window.__onCocosReady = function () {
+            // Cocos 完成載入的回調
+            var origOnCocosReady = window.__onCocosReady;
+            window.__onCocosReady = function() {
                 clearInterval(iv);
                 if (fill) fill.style.width = '100%';
-                setTimeout(function () {
-                    if (orig) orig();
+                if (hint) hint.textContent = '載入完成';
+
+                setTimeout(function() {
+                    // 淡出特效
+                    var layers = [logo, hint, container];
+                    layers.forEach(function(el) {
+                        if (el) {
+                            el.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                            el.style.opacity = '0';
+                            el.style.pointerEvents = 'none';
+                        }
+                    });
+                    
+                    setTimeout(function() {
+                        layers.forEach(function(el) { if (el) el.style.display = 'none'; });
+                        if(origOnCocosReady) origOnCocosReady();
+                    }, 650);
                 }, 300);
             };
         })();
     </script>
+
 </body>
 </html>

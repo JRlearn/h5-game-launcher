@@ -54,6 +54,7 @@ export class LobbyModel {
                 category: 'card',
                 isNew: true,
             },
+            /*
             {
                 id: 'robotClash',
                 name: '機器人對戰',
@@ -62,6 +63,7 @@ export class LobbyModel {
                 category: 'table',
                 isHot: true,
             },
+            */
         ];
     }
 

@@ -4,165 +4,177 @@ import {
     Canvas,
     Color,
     Component,
-    director,
     Node,
-    Scene,
-    UITransform,
     Widget,
+    log,
+    Size,
+    Layers,
+    Vec3,
+    view,
 } from 'cc';
-import { SceneManager } from './manager/scene/SceneManager';
-import { LogManager } from './manager/core/LogManager';
+import { SceneManager } from './framework/manager/ui/scene/SceneManager';
 import { AppConfig } from './config/AppConfig';
-import { GameManager } from './manager/game/GameManager';
-import { LanguageManager } from './manager/i18n/LanguageManager';
-import { LanguageType } from './utils/i18n/LanguageType';
-const { ccclass, property } = _decorator;
+import { NodeFactory } from './core/utils/NodeFactory';
+import { OrientationManager, OrientationType } from './framework/manager/ui/OrientationManager';
+import { OrientationTip } from './framework/manager/ui/OrientationTip';
+
+const { ccclass } = _decorator;
 
 /**
- * App - 核心主場景控制腳本
- * 負責單場景架構的啟動分流與全域管理。
+ * AppScene - 核心主畫面控制器
+ * 負責單場景架構的基礎容器（Canvas, Roots）初始化。
  */
-export class AppScene extends Scene {
-    constructor(name: string) {
-        super(name);
-        LogManager.getInstance().info('App', '🚀 App 啟動中...');
+@ccclass('AppScene')
+export class AppScene extends Component {
+    private _canvasNode!: Node;
+    private _orientationTip!: OrientationTip;
 
-        const canvas = this.createCanvas();
-        const gameRoot = this.createGameRoot();
-        const lobbyRoot = this.createLobbyRoot();
+    /**
+     * 載入時初始化基礎容器
+     */
+    public onLoad(): void {
+        log('[AppScene] onLoad - 初始化基礎容器');
+        // 1. 初始化螢幕方向管理器
+        OrientationManager.getInstance().on(
+            OrientationManager.Event.RESIZE,
+            this._onScreenResize,
+            this,
+        );
 
-        const camera = this.createCamera();
-        canvas.addChild(camera);
-        canvas.addChild(gameRoot);
-        canvas.addChild(lobbyRoot);
+        // 2. 建立基礎層級
+        this._setupBaseHierarchy();
 
-        this.addChild(canvas);
+        // 3. 執行初始適配
+        this._onScreenResize();
+    }
 
+    /**
+     * 建立基礎容器層級
+     */
+    private _setupBaseHierarchy(): void {
+        this._canvasNode = this._createCanvas();
+        const uiRoot = this._createUIRoot();
+        const gameRoot = this._createGameRoot();
+        const lobbyRoot = this._createLobbyRoot();
+
+        // 強制所有 UI 容器使用 UI_2D 層級，確保與相機對應
+        this._canvasNode.layer =
+            uiRoot.layer =
+            gameRoot.layer =
+            lobbyRoot.layer =
+                Layers.Enum.UI_2D;
+
+        const cameraNode = this._createCamera();
+
+        this._canvasNode.addChild(cameraNode);
+        this._canvasNode.addChild(uiRoot);
+        this._canvasNode.addChild(gameRoot);
+        this._canvasNode.addChild(lobbyRoot);
+
+        // 4. 建立旋轉提示層 (放在 Canvas 內最上方)
+        const tipNode = new Node('OrientationTip');
+        tipNode.layer = Layers.Enum.UI_2D;
+        this._canvasNode.addChild(tipNode);
+        this._orientationTip = tipNode.addComponent(OrientationTip) as any;
+
+        this.node.addChild(this._canvasNode);
+
+        // 5. 初始化 SceneManager 的掛載點
         SceneManager.getInstance().init(gameRoot, lobbyRoot);
+        log('[AppScene] ✅ 基礎層級建立完成 (Layer: UI_2D)');
     }
 
-    public async start(): Promise<void> {
-        // 3. 處理語系切換 (如果有透過 URL 指定 lang)
-        const lang = this.parseURLParams('lang');
-        if (lang) {
-            LogManager.getInstance().info('App', `🌐 切換語系至: ${lang}`);
-            LanguageManager.getInstance().setLanguage(lang as LanguageType);
-        }
+    /**
+     * 當螢幕尺寸或方向改變時觸發
+     */
+    private _onScreenResize(): void {
+        const mgr = OrientationManager.getInstance();
 
-        // 4. 取得分流參數
-        const targetGame = this.parseURLParams('game');
-        const customPath = this.parseURLParams('path');
-
-        if (targetGame) {
-            // URL 範例: ?game=bullsAndCows
-            await this.launchGame(targetGame, customPath);
-        } else {
-            // 預設進入大廳
-            // await this.launchLobby();
+        // 交給 Canvas 組件與 Widget 自動處理佈局
+        // 我們只需要更新旋轉提示
+        if (this._orientationTip) {
+            this._orientationTip.updateVisibility();
         }
     }
 
-    private createCanvas() {
-        const canvasNode = new Node('Canvas');
-        const canvas = canvasNode.addComponent(Canvas);
-        canvas.renderMode = 0; // SCREEN_SPACE;
+    /**
+     * 建立 Canvas 根節點
+     */
+    private _createCanvas(): Node {
+        const node = NodeFactory.createUINode('Canvas', {
+            size: new Size(AppConfig.DESIGN_WIDTH, AppConfig.DESIGN_HEIGHT),
+        });
+        const canvas = node.addComponent(Canvas);
+        canvas.alignCanvasWithScreen = true;
 
-        // Widget 自動對齊
-        const widget = canvasNode.addComponent(Widget);
-        widget.isAlignLeft = true;
-        widget.isAlignRight = true;
-        widget.isAlignTop = true;
-        widget.isAlignBottom = true;
+        // 使用引擎標準適配方案
+        view.setDesignResolutionSize(AppConfig.DESIGN_WIDTH, AppConfig.DESIGN_HEIGHT, 4); // 4 is ResolutionPolicy.FIXED_WIDTH
+
+        const widget = node.addComponent(Widget);
+        widget.isAlignLeft = widget.isAlignRight = widget.isAlignTop = widget.isAlignBottom = true;
+        widget.left = widget.right = widget.top = widget.bottom = 0;
         widget.alignMode = Widget.AlignMode.ALWAYS;
 
-        return canvasNode;
-    }
-
-    private createGameRoot() {
-        const node = new Node('GameRoot');
         return node;
     }
 
-    private createLobbyRoot() {
-        const node = new Node('LobbyRoot');
+    /**
+     * 建立 UI 根節點
+     */
+    private _createUIRoot(): Node {
+        const node = NodeFactory.createUINode('UIRoot');
+        this._addFullScreenWidget(node);
         return node;
     }
 
-    private createCamera() {
-        const cameraNode = new Node('Camera');
-        const camera = cameraNode.addComponent(Camera);
-        // 設置清除標誌
+    /**
+     * 建立遊戲根節點
+     */
+    private _createGameRoot(): Node {
+        const node = NodeFactory.createUINode('GameRoot');
+        this._addFullScreenWidget(node);
+        return node;
+    }
+
+    /**
+     * 建立大廳根節點
+     */
+    private _createLobbyRoot(): Node {
+        const node = NodeFactory.createUINode('LobbyRoot');
+        this._addFullScreenWidget(node);
+        return node;
+    }
+
+    private _addFullScreenWidget(node: Node): void {
+        const widget = node.addComponent(Widget);
+        widget.isAlignLeft = widget.isAlignRight = widget.isAlignTop = widget.isAlignBottom = true;
+        widget.left = widget.right = widget.top = widget.bottom = 0;
+        widget.alignMode = Widget.AlignMode.ALWAYS;
+    }
+
+    /**
+     * 建立主攝影機 (2D 最佳化配置)
+     */
+    private _createCamera(): Node {
+        const node = new Node('Main Camera');
+        const camera = node.addComponent(Camera);
+
+        // 設定為正交投影
+        camera.projection = Camera.ProjectionType.ORTHO;
+        camera.visibility = Layers.Enum.DEFAULT;
+
+        // 設定正交相機高度
+        camera.orthoHeight = AppConfig.DESIGN_HEIGHT / 2;
+        log(
+            `[AppScene] Camera Initialized - orthoHeight: ${camera.orthoHeight}, visibility: ${camera.visibility}`,
+        );
+
         camera.clearFlags = Camera.ClearFlag.SOLID_COLOR;
-        // 設置背景顏色
-        camera.clearColor = new Color(0, 0, 0, 255);
-        // 設置位置
-        cameraNode.setPosition(0, 0, 1000);
-        return cameraNode;
-    }
+        const c = AppConfig.CAMERA_CLEAR_COLOR;
+        camera.clearColor = new Color(c.r, c.g, c.b, c.a);
 
-    /**
-     * 啟動大廳
-     */
-    private async launchLobby() {
-        LogManager.getInstance().info('App', '🏠 導向遊戲大廳');
-        GameManager.getInstance().setGameState('LOBBY');
+        node.setPosition(0, 0, AppConfig.CAMERA_Z);
 
-        try {
-            await SceneManager.getInstance().returnToLobby();
-        } catch (err) {
-            LogManager.getInstance().error('App', '❌ 進入大廳失敗', err);
-        }
-    }
-
-    /**
-     * 啟動指定遊戲
-     * @param gameId 遊戲 Bundle 名稱 (不含 games/ 前綴)
-     * @param path 可選的特定 Prefab 路徑
-     */
-    private async launchGame(gameId: string, path?: string | null) {
-        LogManager.getInstance().info('App', `🕹️ 導向遊戲: ${gameId}`);
-        GameManager.getInstance().setGameState('PLAYING');
-
-        const prefabPath = path || AppConfig.DEFAULT_GAME_PREFAB_PATH;
-        const bundleName = `${AppConfig.GAMES_DIR_PREFIX}${gameId}`;
-
-        // bullsAndCows 的 UI Prefab 清單，與 GameRoot 並行加載
-        // 若未來新增遊戲，可在各遊戲的 AppConfig 分支中管理此清單
-        const BULLS_AND_COWS_UI_PREFABS = [
-            'prefabs/GuessNumPanel',
-            'prefabs/LaLaKeyboardPanel',
-            'prefabs/MenuPanel',
-            'prefabs/CreateGamePanel',
-            'prefabs/JoinGamePanel',
-            'prefabs/SetupGuessPanel',
-            'prefabs/ResultPanel',
-            'prefabs/Toast',
-            'prefabs/WaitingMask',
-        ];
-
-        try {
-            await SceneManager.getInstance().enterGame({
-                bundleName,
-                path: prefabPath,
-                isPrefab: true,
-                uiPrefabPaths: gameId === 'bullsAndCows' ? BULLS_AND_COWS_UI_PREFABS : [],
-            });
-        } catch (err) {
-            LogManager.getInstance().error('App', `❌ 進入遊戲 ${gameId} 失敗`, err);
-            this.launchLobby();
-        }
-    }
-
-    /**
-     * 輔助方法：解析 URL 參數
-     */
-    private parseURLParams(key: string): string | null {
-        if (typeof window === 'undefined' || !window.location) return null;
-        try {
-            const urlParams = new URL(window.location.href).searchParams;
-            return urlParams.get(key);
-        } catch (e) {
-            return null;
-        }
+        return node;
     }
 }

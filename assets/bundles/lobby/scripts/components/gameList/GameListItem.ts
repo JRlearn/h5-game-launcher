@@ -1,174 +1,126 @@
-import { _decorator, Component, Node, Label, Sprite, SpriteFrame, Color, UITransform, assetManager } from 'cc';
+import { _decorator, Node, Label, Sprite, SpriteFrame, Color, assetManager } from 'cc';
 import { IGameData } from '../../model/LobbyModel';
-import { ResManager } from '../../../../../scripts/manager/resource/ResManager';
+import { ResManager } from '../../../../../scripts/framework/manager/resource/ResManager';
+import { UIComponentBase } from '../../../../../scripts/core/base/ui/UIComponentBase';
+import { NodeFactory } from '../../../../../scripts/core/utils/NodeFactory';
 
 const { ccclass } = _decorator;
 
 /**
- * GameListItem - 程式碼生成版遊戲卡片
- * 
- * 不依賴 Prefab，所有 UI 結構皆在 onLoad 時由程式動態建立。
+ * GameListItem - 遊戲卡片 (優化版)
  */
 @ccclass('GameListItem')
-export class GameListItem extends Component {
-    // 內部節點引用
-    private bgNode!: Node;
-    private iconSprite!: Sprite;
-    private nameLabel!: Label;
-    private jackpotLabel!: Label;
-    private jackpotContainer!: Node;
-    private tagHot!: Node;
-    private tagNew!: Node;
+export class GameListItem extends UIComponentBase {
+    private _iconSprite!: Sprite;
+    private _nameLabel!: Label;
+    private _jackpotLabel!: Label;
+    private _jackpotContainer!: Node;
+    private _tagHot!: Node;
+    private _tagNew!: Node;
 
-    private gameData: IGameData | null = null;
-    private onEnterCallback: ((gameId: string, bundleName: string) => void) | null = null;
+    private _gameData: IGameData | null = null;
+    private _onEnterCallback: ((gameId: string, bundleName: string) => void) | null = null;
 
-    protected onLoad(): void {
-        this.initUI();
-        this.node.on(Node.EventType.TOUCH_END, this.onEnter, this);
-    }
-
-    /**
-     * 動態構建 UI 結構
-     */
-    private initUI(): void {
-        const uiTrans = this.getOrAddComponent(this.node, UITransform);
-        uiTrans.setContentSize(200, 260);
+    protected createUI(): void {
+        this.getUITransform().setContentSize(200, 260);
 
         // 1. Background
-        this.bgNode = new Node('Background');
-        const bgTrans = this.bgNode.addComponent(UITransform);
-        bgTrans.setContentSize(200, 260);
-        const bgSprite = this.bgNode.addComponent(Sprite);
-        bgSprite.sizeMode = Sprite.SizeMode.CUSTOM;
-        bgSprite.color = new Color(45, 50, 60, 255); // 深灰色卡片色
-        this.node.addChild(this.bgNode);
+        NodeFactory.createSpriteNode('Background', new Color(45, 50, 60, 255)).node.setParent(this.node);
+        this.getUITransform(this.node.getChildByName('Background')!).setContentSize(200, 260);
 
-        // 2. Icon 容器與 Sprite
-        const iconNode = new Node('Icon');
-        const iconTrans = iconNode.addComponent(UITransform);
-        iconTrans.setContentSize(160, 160);
+        // 2. Icon
+        const { node: iconNode, sprite: iconSprite } = NodeFactory.createSpriteNode('Icon');
+        this.getUITransform(iconNode).setContentSize(160, 160);
         iconNode.setPosition(0, 30);
-        this.iconSprite = iconNode.addComponent(Sprite);
-        this.iconSprite.sizeMode = Sprite.SizeMode.CUSTOM;
         this.node.addChild(iconNode);
+        this._iconSprite = iconSprite;
 
-        // 3. NameLabel
-        const nameNode = new Node('NameLabel');
-        const nameTrans = nameNode.addComponent(UITransform);
-        nameTrans.setContentSize(180, 40);
+        // 3. Name
+        const { node: nameNode, label: nameLabel } = NodeFactory.createLabelNode('NameLabel', '', 22);
+        this.getUITransform(nameNode).setContentSize(180, 40);
         nameNode.setPosition(0, -70);
-        this.nameLabel = nameNode.addComponent(Label);
-        this.nameLabel.fontSize = 22;
-        this.nameLabel.lineHeight = 22;
-        this.nameLabel.enableWrapText = false;
-        this.nameLabel.overflow = Label.Overflow.SHRINK;
-        this.nameLabel.string = '';
+        nameLabel.overflow = Label.Overflow.SHRINK;
         this.node.addChild(nameNode);
+        this._nameLabel = nameLabel;
 
-        // 4. Jackpot 容器與 Label
-        this.jackpotContainer = new Node('JackpotContainer');
-        this.jackpotContainer.setPosition(0, -105);
-        this.jackpotContainer.active = false;
+        // 4. Jackpot
+        this._jackpotContainer = NodeFactory.createUINode('JackpotContainer', { parent: this.node });
+        this._jackpotContainer.setPosition(0, -105);
+        this._jackpotContainer.active = false;
         
-        const jpLabelNode = new Node('JackpotLabel');
-        this.jackpotLabel = jpLabelNode.addComponent(Label);
-        this.jackpotLabel.fontSize = 18;
-        this.jackpotLabel.color = new Color(255, 215, 0); // 金色
-        this.jackpotContainer.addChild(jpLabelNode);
-        this.node.addChild(this.jackpotContainer);
+        const { label: jpLabel } = NodeFactory.createLabelNode('JackpotLabel', '', 18);
+        jpLabel.node.setParent(this._jackpotContainer);
+        jpLabel.color = new Color(255, 215, 0); 
+        this._jackpotLabel = jpLabel;
 
         // 5. Tags
-        this.tagHot = this.createTag('HOT', new Color(255, 60, 60));
-        this.tagHot.setPosition(70, 100);
-        this.tagHot.active = false;
-        this.node.addChild(this.tagHot);
+        this._tagHot = this._createTag('HOT', new Color(255, 60, 60));
+        this._tagHot.setPosition(70, 100);
+        this._tagHot.active = false;
+        this.node.addChild(this._tagHot);
 
-        this.tagNew = this.createTag('NEW', new Color(60, 255, 60));
-        this.tagNew.setPosition(-70, 100);
-        this.tagNew.active = false;
-        this.node.addChild(this.tagNew);
+        this._tagNew = this._createTag('NEW', new Color(60, 255, 60));
+        this._tagNew.setPosition(-70, 100);
+        this._tagNew.active = false;
+        this.node.addChild(this._tagNew);
+
+        // 事件綁定
+        this.node.on(Node.EventType.TOUCH_END, this._onEnter, this);
     }
 
-    /** 建立標籤節點小工具 */
-    private createTag(text: string, bgColor: Color): Node {
-        const tagNode = new Node(`Tag_${text}`);
-        const trans = tagNode.addComponent(UITransform);
-        trans.setContentSize(50, 24);
-        
-        const sprite = tagNode.addComponent(Sprite);
-        sprite.sizeMode = Sprite.SizeMode.CUSTOM;
-        sprite.color = bgColor;
+    private _createTag(text: string, bgColor: Color): Node {
+        const { node, sprite } = NodeFactory.createSpriteNode(`Tag_${text}`, bgColor);
+        this.getUITransform(node).setContentSize(50, 24);
 
-        const labelNode = new Node('Label');
-        const label = labelNode.addComponent(Label);
-        label.string = text;
-        label.fontSize = 14;
-        label.lineHeight = 14;
+        const { label } = NodeFactory.createLabelNode('Label', text, 14);
         label.color = Color.WHITE;
-        tagNode.addChild(labelNode);
-        
-        return tagNode;
+        node.addChild(label.node);
+        return node;
     }
 
-    private getOrAddComponent<T extends Component>(node: Node, type: { new(): T }): T {
-        return node.getComponent(type) || node.addComponent(type);
-    }
-
-    // ──────────────────────────────────────────
-    // 公開 API
-    // ──────────────────────────────────────────
-
-    /**
-     * 設定卡片資料並更新顯示
-     */
     public setup(data: IGameData, onEnter: (gameId: string, bundleName: string) => void): void {
-        this.gameData = data;
-        this.onEnterCallback = onEnter;
+        this.initUI();
+        this._gameData = data;
+        this._onEnterCallback = onEnter;
 
-        if (this.nameLabel) this.nameLabel.string = data.name;
+        if (this._nameLabel) this._nameLabel.string = data.name;
         
-        // Jackpot
         const hasJackpot = data.jackpot !== undefined && data.jackpot > 0;
-        if (this.jackpotContainer) this.jackpotContainer.active = hasJackpot;
-        if (hasJackpot && this.jackpotLabel) {
-            this.jackpotLabel.string = this.formatJackpot(data.jackpot!);
+        this._jackpotContainer.active = hasJackpot;
+        if (hasJackpot && this._jackpotLabel) {
+            this._jackpotLabel.string = this._formatJackpot(data.jackpot!);
         }
 
-        // Tags
-        if (this.tagHot) this.tagHot.active = !!data.isHot;
-        if (this.tagNew) this.tagNew.active = !!data.isNew;
+        if (this._tagHot) this._tagHot.active = !!data.isHot;
+        if (this._tagNew) this._tagNew.active = !!data.isNew;
 
-        // Icon
         if (data.iconPath) {
-            this.loadIcon(data.bundleName, data.iconPath);
+            this._loadIcon(data.bundleName, data.iconPath);
         }
     }
 
-    private onEnter(): void {
-        if (!this.gameData || !this.onEnterCallback) return;
-        this.onEnterCallback(this.gameData.id, this.gameData.bundleName);
+    private _onEnter(): void {
+        if (!this._gameData || !this._onEnterCallback) return;
+        this._onEnterCallback(this._gameData.id, this._gameData.bundleName);
     }
 
-    private formatJackpot(amount: number): string {
+    private _formatJackpot(amount: number): string {
         if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M`;
         if (amount >= 1_000) return `${Math.floor(amount / 1_000)}K`;
         return amount.toString();
     }
 
-    private async loadIcon(bundleName: string, iconPath: string): Promise<void> {
+    private async _loadIcon(bundleName: string, iconPath: string): Promise<void> {
         try {
             await ResManager.getInstance().loadBundleAsync(bundleName);
             const bundle = assetManager.getBundle(bundleName);
             if (!bundle) return;
 
             bundle.load(iconPath, SpriteFrame, (err, sf) => {
-                if (!err && this.iconSprite && this.isValid) {
-                    this.iconSprite.spriteFrame = sf;
+                if (!err && this._iconSprite && this.isValid) {
+                    this._iconSprite.spriteFrame = sf;
                 }
             });
-        } catch (e) {
-            console.warn(`GameListItem: 載入圖示失敗 [${bundleName}] ${iconPath}`);
-        }
+        } catch (e) {}
     }
 }

@@ -1,64 +1,103 @@
-import { _decorator, Node } from 'cc';
-import { BaseUIController } from '../../../../../scripts/framework/ui/BaseUIController';
+import { _decorator, Node, Layout, size, Size } from 'cc';
 import { IGameData } from '../../model/LobbyModel';
 import { GameListItem } from './GameListItem';
+import { UIComponentBase } from '../../../../../scripts/core/base/ui/UIComponentBase';
+import { NodeFactory } from '../../../../../scripts/core/utils/NodeFactory';
 
-const { ccclass, property } = _decorator;
+const { ccclass } = _decorator;
 
 /**
- * GameListPanel - 遊戲列表面板 (完全程式碼生成 Item)
- *
- * 繼承 BaseUIController。
- * 現在不再依賴 Prefab 模板，直接在程式碼中建立 GameListItem 實例。
+ * GameListPanel - 遊戲列表面板
+ * 
+ * 優化點：
+ * 1. 繼承 UIComponentBase，自動處理圖層與初始化生命週期。
+ * 2. 使用 NodeFactory 管理層建立 ScrollView，程式碼更簡潔。
  */
 @ccclass('GameListPanel')
-export class GameListPanel extends BaseUIController {
-    @property({ type: Node, tooltip: '帶有 Layout 元件的容器節點（Content）' })
-    public listContainer: Node = null!;
+export class GameListPanel extends UIComponentBase {
+    public listContainer!: Node;
 
-    /** 由 Controller 直接賦值，View 不持有業務邏輯 */
+    /** 由 Controller 直接賦值 */
     public onGameSelected: (gameId: string, bundleName: string) => void = () => {};
 
-    private itemInstances: Node[] = [];
+    private _itemInstances: Node[] = [];
 
     /**
-     * 覆寫 BaseUIController.init()
+     * 實作基類 UI 建立邏輯
      */
-    public override init(): void {
-        this.collectViews(this.node);
+    protected createUI(): void {
+        const panelSize = new Size(680, 1000); // 預設改為適配豎屏
+        this.getUITransform().setContentSize(panelSize);
+
+        // 使用 NodeFactory 工廠方法建立複雜的 ScrollView 結構
+        const { node: svNode, content } = NodeFactory.createScrollView('ScrollView', panelSize);
+        this.node.addChild(svNode);
+        this.listContainer = content;
+
+        // 配置佈局 (豎屏建議 2 直列)
+        const layout = this.getOrAddComponent(this.listContainer, Layout);
+        layout.type = Layout.Type.GRID;
+        layout.paddingLeft = layout.paddingRight = 30;
+        layout.paddingTop = layout.paddingBottom = 20;
+        layout.spacingX = 40;
+        layout.spacingY = 40;
+        layout.cellSize = size(290, 360); // 2 個橫排剛好接近 680
+        layout.startAxis = Layout.AxisDirection.HORIZONTAL;
+        layout.affectedByScale = true;
     }
 
     /**
-     * 根據遊戲資料列表重新渲染所有卡片
+     * 監聽旋轉
      */
-    public renderList(games: IGameData[]): void {
-        if (!this.listContainer) {
-            console.error('GameListPanel: 請在 Editor 綁定 listContainer');
-            return;
+    protected override onOrientationChange(orientation: any): void {
+        const isLandscape = orientation === 'landscape';
+        const newWidth = isLandscape ? 1200 : 680;
+        const newHeight = isLandscape ? 560 : 1000;
+        
+        this.getUITransform().setContentSize(newWidth, newHeight);
+        
+        const svNode = this.node.getChildByName('ScrollView');
+        if (svNode) {
+            this.getUITransform(svNode).setContentSize(newWidth, newHeight);
+            const vpNode = svNode.getChildByName('Viewport');
+            if (vpNode) this.getUITransform(vpNode).setContentSize(newWidth, newHeight);
         }
 
-        this.clearList();
+        const layout = this.listContainer.getComponent(Layout);
+        if (layout) {
+            // 橫向可以 5 個，直向 2 個
+            layout.cellSize = isLandscape ? size(200, 260) : size(290, 360);
+            layout.updateLayout();
+        }
+    }
+
+    /**
+     * 根據遊戲資料列表重新渲染
+     */
+    public renderList(games: IGameData[]): void {
+        this.initUI(); // 確保 UI 結構已建立
+        this._clearList();
 
         games.forEach((game) => {
-            // 直接建立 Node 並掛載元件，不再使用 instantiate(prefab)
-            const itemNode = new Node(`GameItem_${game.id}`);
-            const itemComp = itemNode.addComponent(GameListItem);
-            
-            this.listContainer.addChild(itemNode);
-            this.itemInstances.push(itemNode);
+            const { component: itemComp } = NodeFactory.createNodeWithComponent(
+                `GameItem_${game.id}`, 
+                GameListItem, 
+                { parent: this.listContainer }
+            );
 
-            // 初始化卡片資料
+            this._itemInstances.push(itemComp.node);
+
             itemComp.setup(game, (gameId: string, bundleName: string) => {
                 this.onGameSelected(gameId, bundleName);
             });
         });
+
+        const layout = this.listContainer.getComponent(Layout);
+        if (layout) layout.updateLayout();
     }
 
-    /**
-     * 清空列表
-     */
-    public clearList(): void {
-        this.itemInstances.forEach((node) => node.destroy());
-        this.itemInstances = [];
+    private _clearList(): void {
+        this._itemInstances.forEach((node) => node.destroy());
+        this._itemInstances = [];
     }
 }
