@@ -1,4 +1,15 @@
-import { _decorator, Canvas, Component, director, Node } from 'cc';
+import {
+    _decorator,
+    Camera,
+    Canvas,
+    Color,
+    Component,
+    director,
+    Node,
+    Scene,
+    UITransform,
+    Widget,
+} from 'cc';
 import { SceneManager } from './manager/scene/SceneManager';
 import { LogManager } from './manager/core/LogManager';
 import { AppConfig } from './config/AppConfig';
@@ -11,10 +22,23 @@ const { ccclass, property } = _decorator;
  * App - 核心主場景控制腳本
  * 負責單場景架構的啟動分流與全域管理。
  */
-export class App {
-    public init(): void {
+export class AppScene extends Scene {
+    constructor(name: string) {
+        super(name);
         LogManager.getInstance().info('App', '🚀 App 啟動中...');
-        SceneManager.getInstance().init();
+
+        const canvas = this.createCanvas();
+        const gameRoot = this.createGameRoot();
+        const lobbyRoot = this.createLobbyRoot();
+
+        const camera = this.createCamera();
+        canvas.addChild(camera);
+        canvas.addChild(gameRoot);
+        canvas.addChild(lobbyRoot);
+
+        this.addChild(canvas);
+
+        SceneManager.getInstance().init(gameRoot, lobbyRoot);
     }
 
     public async start(): Promise<void> {
@@ -34,8 +58,46 @@ export class App {
             await this.launchGame(targetGame, customPath);
         } else {
             // 預設進入大廳
-            await this.launchLobby();
+            // await this.launchLobby();
         }
+    }
+
+    private createCanvas() {
+        const canvasNode = new Node('Canvas');
+        const canvas = canvasNode.addComponent(Canvas);
+        canvas.renderMode = 0; // SCREEN_SPACE;
+
+        // Widget 自動對齊
+        const widget = canvasNode.addComponent(Widget);
+        widget.isAlignLeft = true;
+        widget.isAlignRight = true;
+        widget.isAlignTop = true;
+        widget.isAlignBottom = true;
+        widget.alignMode = Widget.AlignMode.ALWAYS;
+
+        return canvasNode;
+    }
+
+    private createGameRoot() {
+        const node = new Node('GameRoot');
+        return node;
+    }
+
+    private createLobbyRoot() {
+        const node = new Node('LobbyRoot');
+        return node;
+    }
+
+    private createCamera() {
+        const cameraNode = new Node('Camera');
+        const camera = cameraNode.addComponent(Camera);
+        // 設置清除標誌
+        camera.clearFlags = Camera.ClearFlag.SOLID_COLOR;
+        // 設置背景顏色
+        camera.clearColor = new Color(0, 0, 0, 255);
+        // 設置位置
+        cameraNode.setPosition(0, 0, 1000);
+        return cameraNode;
     }
 
     /**

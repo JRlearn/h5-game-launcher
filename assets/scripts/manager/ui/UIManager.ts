@@ -52,14 +52,28 @@ export class UIManager extends Component {
     ): T {
         let prefab = ResManager.getInstance().getPrefabFromBundle(bundleName, prefabName);
         if (!prefab) {
-            LogManager.getInstance().error(
+            // 如果找不到 Prefab，回退到 Code-only 模式建立空節點
+            LogManager.getInstance().warn(
                 'UI',
-                `UIManager: 找不到預製體 ${prefabName} in bundle ${bundleName}`,
+                `UIManager: 找不到預製體 ${prefabName}，將以 Code-only 模式建立。`,
             );
-            throw new Error(`Missing UI Prefab: ${prefabName}`);
+            return this.createComponentOnly(prefabName, componentClass);
         }
         let ui = instantiate(prefab);
         return ui.addComponent(componentClass); // 動態掛載組件
+    }
+
+    /**
+     * Code-only 模式建立組件（不使用 Prefab）
+     * @param nodeName 節點名稱
+     * @param componentClass 對應的腳本組件型別
+     */
+    public createComponentOnly<T extends BaseUIController>(
+        nodeName: string,
+        componentClass: { new (): T },
+    ): T {
+        let node = new Node(nodeName);
+        return node.addComponent(componentClass);
     }
 
     /**

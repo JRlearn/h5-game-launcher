@@ -18,9 +18,8 @@ export class BaseUIController extends Component {
      * 初始化
      */
     public init() {
-        this.node.active = false; // 隱藏節點
+        this.node.active = false;
         this.collectViews(this.node);
-        console.log(this.name, this.views);
     }
 
     /**

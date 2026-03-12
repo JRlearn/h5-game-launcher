@@ -1,8 +1,8 @@
 /**
- * 共用遊戲Model基底
+ * 共用Model基底
  * @abstract
- * @class GameModelBase
+ * @class ModelBase
  * @implements Common.GameFramework.Model.IGameModelBase
  * @memberof Common.GameFramework.Model
  */
-export abstract class GameModelBase {}
+export abstract class ModelBase {}

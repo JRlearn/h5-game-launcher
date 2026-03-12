@@ -1,4 +1,4 @@
-import { GameControllerBase } from '../../../../../scripts/framework/mvc/controller/GameControllerBase';
+import { ControllerBase } from '../../../../../scripts/framework/mvc/controller/ControllerBase';
 import { GameView } from '../view/GameView';
 import { GameModel } from '../model/GameModel';
 import { StateMachine } from '../../../../../scripts/framework/stateMachine/StateMachine';
@@ -27,7 +27,7 @@ enum GameState {
 }
 
 export class GameController
-    extends GameControllerBase<GameView, GameModel>
+    extends ControllerBase<GameView, GameModel>
     implements IWebSocketHandler
 {
     public onOpen(): void {

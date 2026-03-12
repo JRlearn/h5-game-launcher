@@ -1,49 +1,48 @@
-import { _decorator, Component } from 'cc';
+import { Node } from 'cc';
+import { ViewBase } from '../../../../scripts/framework/mvc/view/ViewBase';
 import { IGameData } from '../model/LobbyModel';
 import { GameListPanel } from '../components/gameList/GameListPanel';
-
-const { ccclass, property } = _decorator;
+import { CategoryTabBar } from '../components/category/CategoryTabBar';
 
 /**
- * LobbyView - 大廳視圖
- *
- * 負責大廳主場景的 UI 橋接：
- * - 接收 Controller 傳入的遊戲資料並委派 GameListPanel 渲染
- * - 轉發玩家交互事件至 Controller
- *
- * 掛載位置：大廳主 Prefab（LobbyMain）根節點
+ * LobbyView - 大廳視圖層
+ * 
+ * 負責構建大廳的整體 UI 結構：
+ * 1. 分類頁籤 (CategoryTabBar)
+ * 2. 遊戲列表 (GameListPanel)
  */
-@ccclass('LobbyView')
-export class LobbyView extends Component {
-    @property({ type: GameListPanel, tooltip: '遊戲列表面板元件' })
-    public gameListPanel: GameListPanel = null!;
+export class LobbyView extends ViewBase {
+    public gameListPanel!: GameListPanel;
+    public categoryTabBar!: CategoryTabBar;
 
-    private onGameSelectedCallback: ((gameId: string, bundleName: string) => void) | null = null;
+    private readonly bundleName = 'lobby';
 
-    protected onLoad(): void {
-        if (!this.gameListPanel) {
-            console.error('LobbyView: 請在編輯器綁定 gameListPanel');
-        }
+    public override init(): void {
+        // 1. 建立分類頁籤
+        this.categoryTabBar = this.createComponent(
+            this.bundleName,
+            'CategoryTabBar',
+            CategoryTabBar,
+        );
+        this.categoryTabBar.init();
+        this.addChild(this.categoryTabBar);
+
+        // 2. 建立遊戲列表面板
+        this.gameListPanel = this.createComponent(
+            this.bundleName,
+            'GameListPanel',
+            GameListPanel
+        );
+        this.gameListPanel.init();
+        this.addChild(this.gameListPanel);
     }
 
     /**
-     * 初始化視圖事件回調（由 Controller 傳入）
-     */
-    public init(onGameSelected: (gameId: string, bundleName: string) => void): void {
-        this.onGameSelectedCallback = onGameSelected;
-
-        if (this.gameListPanel) {
-            this.gameListPanel.init((gameId, bundleName) => {
-                this.onGameSelectedCallback?.(gameId, bundleName);
-            });
-        }
-    }
-
-    /**
-     * 渲染遊戲列表（由 Controller 傳入 Model 資料後呼叫）
+     * 渲染遊戲列表（由 Controller 傳入過濾後的資料）
      */
     public renderGameList(games: IGameData[]): void {
-        if (!this.gameListPanel) return;
-        this.gameListPanel.renderList(games);
+        if (this.gameListPanel) {
+            this.gameListPanel.renderList(games);
+        }
     }
 }

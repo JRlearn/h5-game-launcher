@@ -1,6 +1,5 @@
-import { Component, Node } from 'cc';
-import { UIManager } from '../../../../../scripts/manager/ui/UIManager';
-import { BaseUIController } from '../../../../../scripts/framework/ui/BaseUIController';
+import { Node } from 'cc';
+import { ViewBase } from '../../../../../scripts/framework/mvc/view/ViewBase';
 import { GuessNumPanel } from '../components/guessNumberPanel/GuessNumPanel';
 import { MenuPanel } from '../components/menuPanel/MenuPanel';
 import { CreateGamePanel } from '../components/createGamePanel/CreateGamePanel';
@@ -11,18 +10,17 @@ import { ResultPanel } from '../components/resultPanel/ResultPanel';
 import { WaitingMask } from '../components/waitingMask/WaitingMask';
 import { LaLaKeyboardPanel } from '../components/keyboard/LaLaKeyboardPanel';
 
-/** 這個遊戲 Bundle 名稱（供 createComponent 使用） */
-const BUNDLE_NAME = 'games/bullsAndCows';
-
 /**
- * GameView - 純 View 層
+ * GameView - bullsAndCows 遊戲視圖層
  *
- * 職責：建立並持有所有 UI 組件。
- * 資源預載（loadPrefabsAsync）已移至 Main.ts 的 initAsync() 流程，
- * 確保在 init() 被呼叫前所有 Prefab 已存在快取中。
+ * 繼承 ViewBase，只負責：
+ * 1. 宣告此遊戲所有 UI Panel 的屬性
+ * 2. 在 init() 中按順序建立各 Panel（由 Main.ts 在 preload 後呼叫）
+ *
+ * 通用能力（createComponent / addChild / root / bundleName）
+ * 已由 ViewBase 提供。
  */
-export class GameView {
-    protected root: Node;
+export class GameView extends ViewBase {
     public menuPanel!: MenuPanel;
     public createGamePanel!: CreateGamePanel;
     public joinGamePanel!: JoinGamePanel;
@@ -32,59 +30,60 @@ export class GameView {
     public resultPanel!: ResultPanel;
     public toast!: Toast;
     public waitingMask!: WaitingMask;
+    private bundleName = 'games/bullsAndCows';
 
-    constructor(root: Node) {
-        this.root = root;
-    }
-
-    /** 初始化（同步，need Prefabs already in cache） */
-    public init() {
-        this.guessNumberPanel = this.createComponent('GuessNumPanel', GuessNumPanel);
+    public override init(): void {
+        this.guessNumberPanel = this.createComponent(
+            this.bundleName,
+            'GuessNumPanel',
+            GuessNumPanel,
+        );
         this.guessNumberPanel.init();
         this.addChild(this.guessNumberPanel);
 
-        this.keyboardPanel = this.createComponent('LaLaKeyboardPanel', LaLaKeyboardPanel);
+        this.keyboardPanel = this.createComponent(
+            this.bundleName,
+            'LaLaKeyboardPanel',
+            LaLaKeyboardPanel,
+        );
         this.keyboardPanel.init();
         this.addChild(this.keyboardPanel);
 
-        this.menuPanel = this.createComponent('MenuPanel', MenuPanel);
+        this.menuPanel = this.createComponent(this.bundleName, 'MenuPanel', MenuPanel);
         this.menuPanel.init();
         this.addChild(this.menuPanel);
 
-        this.createGamePanel = this.createComponent('CreateGamePanel', CreateGamePanel);
+        this.createGamePanel = this.createComponent(
+            this.bundleName,
+            'CreateGamePanel',
+            CreateGamePanel,
+        );
         this.createGamePanel.init();
         this.addChild(this.createGamePanel);
 
-        this.joinGamePanel = this.createComponent('JoinGamePanel', JoinGamePanel);
+        this.joinGamePanel = this.createComponent(this.bundleName, 'JoinGamePanel', JoinGamePanel);
         this.joinGamePanel.init();
         this.addChild(this.joinGamePanel);
 
-        this.setupGuessPanel = this.createComponent('SetupGuessPanel', SetupGuessPanel);
+        this.setupGuessPanel = this.createComponent(
+            this.bundleName,
+            'SetupGuessPanel',
+            SetupGuessPanel,
+        );
         this.setupGuessPanel.init();
         this.addChild(this.setupGuessPanel);
 
-        this.resultPanel = this.createComponent('ResultPanel', ResultPanel);
+        this.resultPanel = this.createComponent(this.bundleName, 'ResultPanel', ResultPanel);
         this.resultPanel.init();
         this.addChild(this.resultPanel);
 
-        this.toast = this.createComponent('Toast', Toast);
+        this.toast = this.createComponent(this.bundleName, 'Toast', Toast);
         this.toast.init();
         this.toast.node.y = -140;
         this.addChild(this.toast);
 
-        this.waitingMask = this.createComponent('WaitingMask', WaitingMask);
+        this.waitingMask = this.createComponent(this.bundleName, 'WaitingMask', WaitingMask);
         this.waitingMask.init();
         this.addChild(this.waitingMask);
-    }
-
-    private createComponent<T extends BaseUIController>(
-        prefabName: string,
-        ComponentClass: new () => T,
-    ): T {
-        return UIManager.getInstance().createComponent(BUNDLE_NAME, prefabName, ComponentClass);
-    }
-
-    protected addChild(component: Component) {
-        this.root.addChild(component.node);
     }
 }

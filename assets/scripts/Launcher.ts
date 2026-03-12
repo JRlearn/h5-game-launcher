@@ -8,6 +8,7 @@ import { AppConfig } from './config/AppConfig';
 import { GameManager } from './manager/game/GameManager';
 import { StorageManager } from './manager/data/StorageManager';
 import { App } from './App';
+import { AppScene } from './AppScene';
 const { ccclass, property } = _decorator;
 
 /**
@@ -64,11 +65,9 @@ export class Launcher extends Component {
                 `✅ 核心資源 + AppScene 預載完成，切換至: ${AppConfig.SCENE_MAIN}`,
             );
 
-            // ── 兩者完成後切換場景（幾乎無延遲）──────────────────
-            director.loadScene(AppConfig.SCENE_MAIN, () => {
-                const app = new App();
-                app.init();
-                app.start();
+            const scene = new AppScene(AppConfig.SCENE_MAIN);
+            scene.start();
+            director.runSceneImmediate(scene, () => {
                 LogManager.getInstance().info('App', '🚀 已進入主場景 AppScene');
             });
         } catch (err) {

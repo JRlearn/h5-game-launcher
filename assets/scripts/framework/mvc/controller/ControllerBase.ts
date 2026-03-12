@@ -1,11 +1,11 @@
 /**
  * 共用遊戲MVC基底，將大廳接到的事件轉到這處理<br>
  * @abstract
- * @class GameControllerBase
+ * @class ControllerBase
  * @implements Common.GameFramework.Entry.IGameObject
  * @memberof Common.GameFramework.Controller
  */
-export abstract class GameControllerBase<TView, TModel> {
+export abstract class ControllerBase<TView, TModel> {
     /**
      * 遊戲畫面
      */
