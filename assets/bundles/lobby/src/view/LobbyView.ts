@@ -1,10 +1,13 @@
-import { Layout, Widget } from 'cc';
+import { Widget } from 'cc';
 import { IGameData } from '../model/LobbyModel';
 import { GameListPanel } from '../components/gameList/GameListPanel';
 import { CategoryTabBar } from '../components/category/CategoryTabBar';
+import { SpriteFrame, Color } from 'cc';
 import { ViewBase } from '../../../../scripts/core/base/mvc/view/ViewBase';
 import { NodeFactory } from '../../../../scripts/core/utils/NodeFactory';
 import { AppConfig } from '../../../../scripts/config/AppConfig';
+import { ResManager } from '../../../../scripts/framework/manager/resource/ResManager';
+import { LanguageManager } from '../../../../scripts/core/i18n/LanguageManager';
 
 /**
  * LobbyView - 大廳視圖層
@@ -26,14 +29,10 @@ export class LobbyView extends ViewBase {
         const widget = this.getOrAddComponent(this.root, Widget);
         widget.isAlignTop = widget.isAlignBottom = widget.isAlignLeft = widget.isAlignRight = true;
         widget.top = widget.bottom = widget.left = widget.right = 0;
-        widget.alignMode = Widget.AlignMode.ALWAYS;
+        widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
 
-        // 2. 設定根節點佈局 (垂直排列)
-        // const layout = this.getOrAddComponent(this.root, Layout);
-        // layout.type = Layout.Type.VERTICAL;
-        // layout.verticalDirection = Layout.VerticalDirection.TOP_TO_BOTTOM;
-        // layout.spacingY = 20;
-        // layout.resizeMode = Layout.ResizeMode.NONE;
+        // 2. 建立主背景圖
+        this._initBackground();
 
         // 3. 建立分類頁籤
         const { component: tabComp } = NodeFactory.createNodeWithComponent(
@@ -50,7 +49,7 @@ export class LobbyView extends ViewBase {
         tabWidget.top = 20;
         tabWidget.isAlignHorizontalCenter = true;
         tabWidget.horizontalCenter = 0;
-        tabWidget.alignMode = Widget.AlignMode.ALWAYS;
+        tabWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
 
         // 4. 建立遊戲列表面板
         const { component: panelComp } = NodeFactory.createNodeWithComponent(
@@ -59,7 +58,7 @@ export class LobbyView extends ViewBase {
             { parent: this.root },
         );
         this.gameListPanel = panelComp;
-        
+
         // 為 GameListPanel 添加 Widget 使其填滿剩餘空間
         const panelWidget = this.getOrAddComponent(this.gameListPanel.node, Widget);
         panelWidget.isAlignTop = true;
@@ -68,10 +67,52 @@ export class LobbyView extends ViewBase {
         panelWidget.bottom = 40;
         panelWidget.isAlignLeft = panelWidget.isAlignRight = true;
         panelWidget.left = panelWidget.right = 100; // 兩側間距
-        panelWidget.alignMode = Widget.AlignMode.ALWAYS;
-        
+        panelWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+
         // 觸發初始大小計算
         panelWidget.updateAlignment();
+    }
+
+    /**
+     * 建立並載入大廳背景
+     */
+    private async _initBackground(): Promise<void> {
+        // 先給一個比較深的預設底色，避免加載前全黑
+        const { node, sprite } = NodeFactory.createSpriteNode(
+            'Background',
+            new Color(20, 25, 35, 255),
+            { parent: this.root },
+        );
+        node.setSiblingIndex(0); // 確保在最底層
+
+        // 滿版對齊
+        const bgWidget = this.getOrAddComponent(node, Widget);
+        bgWidget.isAlignTop =
+            bgWidget.isAlignBottom =
+            bgWidget.isAlignLeft =
+            bgWidget.isAlignRight =
+                true;
+        bgWidget.top = bgWidget.bottom = bgWidget.left = bgWidget.right = 0;
+        bgWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+
+        try {
+            // 異步載入背景圖 (從語系資源包)
+            const lang = LanguageManager.getInstance().getLanguage();
+            const resBundle = `${AppConfig.BUNDLE_LOBBY}_${lang}`;
+            const bgPath = 'textures/bg/spriteFrame';
+
+            // 下載並套用背景貼圖
+            const sf = await ResManager.getInstance().loadAssetAsync(
+                resBundle,
+                bgPath,
+                SpriteFrame,
+            );
+            if (sf && sprite && sprite.isValid) {
+                sprite.spriteFrame = sf;
+            }
+        } catch (err) {
+            console.error('[LobbyView] 背景圖加載失敗:', err);
+        }
     }
 
     /**

@@ -24,7 +24,9 @@ export class BaseUIController extends Component {
     }
 
     private _onInternalOrientationChange(orientation: OrientationType): void {
-        this.onOrientationChange(orientation);
+        if (typeof this.onOrientationChange === 'function') {
+            this.onOrientationChange(orientation);
+        }
     }
 
     /**

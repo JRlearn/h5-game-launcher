@@ -3,6 +3,7 @@ import { AppConfig } from '../../../config/AppConfig';
 import { LanguageType } from '../../../core/i18n/LanguageType';
 import { BrowserUtils } from '../../../core/utils/BrowserUtils';
 import { GameState } from './GameState';
+import { SceneManager } from '../system/SceneManager';
 
 /**
  * GameManager - 遊戲管理器
@@ -10,9 +11,11 @@ import { GameState } from './GameState';
  */
 export class GameManager {
     private static _instance: GameManager | null = null;
-    
+
     /** 當前遊戲狀態 */
     private _gameState: GameState = GameState.INIT;
+    /** 當前運行的遊戲 ID */
+    private _currentGameId: string | null = null;
 
     private constructor() {}
 
@@ -64,7 +67,7 @@ export class GameManager {
      */
     public pauseGame(): void {
         if (this._gameState === GameState.PAUSED) return;
-        
+
         log('[GameManager] 暫停遊戲');
         this.setGameState(GameState.PAUSED);
         director.pause();
@@ -87,5 +90,31 @@ export class GameManager {
     public endGame(): void {
         log('[GameManager] 結束遊戲');
         this.setGameState(GameState.GAMEOVER);
+    }
+
+    /**
+     * 進入遊戲
+     * @param gameId 遊戲識別碼
+     * @param path 遊戲預製體路徑
+     * @param mainComponent 入口元件名稱
+     */
+    public async enterGame(gameId: string, path: string, mainComponent?: string): Promise<void> {
+        this.setGameState(GameState.PLAYING);
+        this._currentGameId = gameId;
+        await SceneManager.getInstance().enterGame({
+            gameId,
+            path,
+            isPrefab: true,
+            mainComponent,
+        });
+    }
+
+    /**
+     * 返回大廳
+     */
+    public async returnToLobby(): Promise<void> {
+        this.setGameState(GameState.LOBBY);
+        this._currentGameId = null;
+        await SceneManager.getInstance().returnToLobby();
     }
 }

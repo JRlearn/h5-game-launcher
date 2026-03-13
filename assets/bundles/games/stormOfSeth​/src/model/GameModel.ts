@@ -1,20 +1,20 @@
 /**
- * SlotModel - 老虎機資料模型
+ * GameModel - 老虎機資料模型
  * 負責管理輪盤結構、餘額、下注與開獎結果矩陣。
  */
-export class SlotModel {
+export class GameModel {
     /** 輪盤總軸數 (Reel Count) */
     public readonly REEL_COUNT = 5;
     /** 每軸顯示的符號列數 (Row Count) */
     public readonly ROW_COUNT = 3;
-    
+
     /** 是否正處於轉動狀態 */
     private _isSpinning: boolean = false;
     /** 使用者當前餘額 */
     private _balance: number = 10000;
     /** 單次旋轉的下注金額 */
     private _betAmount: number = 10;
-    
+
     /** 輪盤開獎結果矩陣 (reelIndex, symbolIndex)，儲存符號 ID */
     private _reelResults: number[][] = [];
 

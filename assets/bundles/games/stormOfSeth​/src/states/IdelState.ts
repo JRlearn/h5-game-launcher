@@ -1,9 +1,9 @@
 import { StateBase } from 'db://assets/scripts/core/base/stateMachine/StateBase';
-import { SlotController } from '../controller/SlotController';
-import { SlotModel } from '../model/SlotModel';
-import { SlotView } from '../view/SlotView';
+import { GameController } from '../controller/GameController';
+import { GameModel } from '../model/GameModel';
+import { GameView } from '../view/GameView';
 
-export class IdelState extends StateBase<SlotModel, SlotView, SlotController> {
+export class IdelState extends StateBase<GameModel, GameView, GameController> {
     public override stateBegin(data: any): void {
         console.log('IdleState 開始', data);
     }

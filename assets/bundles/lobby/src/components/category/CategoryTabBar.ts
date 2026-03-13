@@ -75,20 +75,31 @@ export class CategoryTabBar extends UIComponentBase {
             node: svNode,
             content,
             scrollView,
+            viewport,
         } = NodeFactory.createScrollView('TabScrollView', finalSize);
         scrollView.vertical = false;
         scrollView.horizontal = true;
         this.node.addChild(svNode);
 
         // 為 ScrollView 添加 Widget 確保填滿父級
-        const svWidget = svNode.addComponent(Widget) as Widget;
+        const svWidget = svNode.addComponent(Widget);
         svWidget.isAlignLeft =
             svWidget.isAlignRight =
             svWidget.isAlignTop =
             svWidget.isAlignBottom =
                 true;
         svWidget.left = svWidget.right = svWidget.top = svWidget.bottom = 0;
-        svWidget.alignMode = Widget.AlignMode.ALWAYS;
+        svWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+
+        // 為 Viewport 添加 Widget 確保填滿 ScrollView
+        const vpWidget = viewport.addComponent(Widget);
+        vpWidget.isAlignLeft =
+            vpWidget.isAlignRight =
+            vpWidget.isAlignTop =
+            vpWidget.isAlignBottom =
+                true;
+        vpWidget.left = vpWidget.right = vpWidget.top = vpWidget.bottom = 0;
+        vpWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
 
         this._container = content;
 
@@ -120,7 +131,6 @@ export class CategoryTabBar extends UIComponentBase {
         if (this._tabs.length > 0) {
             this.setup(this._tabs);
         }
-        this.onOrientationChange(OrientationType.LANDSCAPE);
     }
 
     /**
@@ -156,18 +166,17 @@ export class CategoryTabBar extends UIComponentBase {
      * 當環境發生旋轉時的回調處理
      * @param orientation 當前方向
      */
-    protected onOrientationChange(orientation: OrientationType): void {
-        log('onOrientationChange', orientation);
+    protected override onOrientationChange(orientation: OrientationType): void {
         const isLandscape = orientation === OrientationType.LANDSCAPE;
-        const newWidth = isLandscape ? 1920 : 1080;
-        const height = isLandscape ? 200 : 1920;
-        this.getUITransform().setContentSize(newWidth, height);
+        const newWidth = isLandscape ? 1496 : 900;
+        const newHeight = 176; // 固定正確的高度，修正跑版
+
+        this.getUITransform().setContentSize(newWidth, newHeight);
+
         const svNode = this.node.getChildByName('TabScrollView');
         if (svNode) {
-            this.getUITransform(svNode).setContentSize(newWidth, height);
             const vpNode = svNode.getChildByName('Viewport');
             if (vpNode) {
-                this.getUITransform(vpNode).setContentSize(newWidth, height);
                 const content = vpNode.getChildByName('Content');
                 if (content && this._layers) {
                     const contentTrans = this.getUITransform(content);
@@ -207,7 +216,7 @@ export class CategoryTabBar extends UIComponentBase {
      */
     public selectTab(index: number, force: boolean = false): void {
         if (index < 0 || index >= this._tabs.length) return;
-        
+
         // 如果點選的是同一個頁籤，則不執行切換邏輯 (除非是強制執行)
         if (!force && index === this._currentIndex && this._buttonNodes.length > 0) {
             return;

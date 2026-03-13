@@ -66,10 +66,10 @@ export class AppScene extends Component {
         this._canvasNode.addChild(this._lobbyRoot);
 
         // 建立旋轉提示層 (放在 Canvas 內最上方)
-        // const tipNode = new Node('OrientationTip');
-        // tipNode.layer = Layers.Enum.UI_2D;
-        // this._canvasNode.addChild(tipNode);
-        // this._orientationTip = tipNode.addComponent(OrientationTip) as any;
+        const tipNode = new Node('OrientationTip');
+        tipNode.layer = Layers.Enum.UI_2D;
+        this._canvasNode.addChild(tipNode);
+        this._orientationTip = tipNode.addComponent(OrientationTip);
 
         this.node.addChild(this._canvasNode);
 
@@ -105,6 +105,7 @@ export class AppScene extends Component {
         // 4. 對內容根節點進行動態縮放 (若需要 Fit 效果)
         const fitScale = this._screenAdapter ? this._screenAdapter.getAdaptiveScale() : 1;
         this._gameRoot.setScale(fitScale, fitScale, 1);
+        // this._lobbyRoot.setScale(fitScale, fitScale, 1);
     }
 
     /**
@@ -121,7 +122,7 @@ export class AppScene extends Component {
         const widget = node.getComponent(Widget) || node.addComponent(Widget);
         widget.isAlignLeft = widget.isAlignRight = widget.isAlignTop = widget.isAlignBottom = true;
         widget.left = widget.right = widget.top = widget.bottom = 0;
-        widget.alignMode = Widget.AlignMode.ALWAYS;
+        widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
 
         return node;
     }
@@ -161,7 +162,7 @@ export class AppScene extends Component {
         const widget = node.addComponent(Widget);
         widget.isAlignLeft = widget.isAlignRight = widget.isAlignTop = widget.isAlignBottom = true;
         widget.left = widget.right = widget.top = widget.bottom = 0;
-        widget.alignMode = Widget.AlignMode.ALWAYS;
+        widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
     }
 
     /**

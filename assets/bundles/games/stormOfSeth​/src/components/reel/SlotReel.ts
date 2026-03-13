@@ -14,6 +14,10 @@ export class SlotReel extends UIComponentBase {
     private _iconSize = new Size(120, 120);
     private _visibleCount = 3;
 
+    protected onOrientationChange(orientation: any): void {
+        // SlotReel 的佈局由上層 GameView 處理
+    }
+
     protected createUI(): void {
         const totalHeight = this._iconSize.height * this._visibleCount;
         this.getUITransform().setContentSize(this._iconSize.width, totalHeight);

@@ -21,7 +21,7 @@ export class OrientationTip extends UIComponentBase {
         const rootWidget = this.getOrAddComponent(this.node, Widget);
         rootWidget.isAlignLeft = rootWidget.isAlignRight = rootWidget.isAlignTop = rootWidget.isAlignBottom = true;
         rootWidget.left = rootWidget.right = rootWidget.top = rootWidget.bottom = 0;
-        rootWidget.alignMode = Widget.AlignMode.ALWAYS;
+        rootWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
 
         // 1. 建立黑色半透明背景 (遮罩全螢幕並攔截輸入)
         const { node: bg } = NodeFactory.createSpriteNode('Background', new Color(0, 0, 0, 180));
@@ -32,7 +32,7 @@ export class OrientationTip extends UIComponentBase {
         const bgWidget = bg.addComponent(Widget);
         bgWidget.isAlignLeft = bgWidget.isAlignRight = bgWidget.isAlignTop = bgWidget.isAlignBottom = true;
         bgWidget.left = bgWidget.right = bgWidget.top = bgWidget.bottom = -1000; // 邊界溢出確保覆蓋
-        bgWidget.alignMode = Widget.AlignMode.ALWAYS;
+        bgWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
         bg.addComponent(BlockInputEvents); 
 
         // 2. 建立提示內容容器
@@ -41,7 +41,7 @@ export class OrientationTip extends UIComponentBase {
         const tipWidget = this._tipNode.addComponent(Widget);
         tipWidget.isAlignHorizontalCenter = tipWidget.isAlignVerticalCenter = true;
         tipWidget.horizontalCenter = tipWidget.verticalCenter = 0;
-        tipWidget.alignMode = Widget.AlignMode.ALWAYS;
+        tipWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
 
         // 3. 建立圖標或文字
         const { label } = NodeFactory.createLabelNode('Text', '請旋轉螢幕以獲得最佳體驗', 40);

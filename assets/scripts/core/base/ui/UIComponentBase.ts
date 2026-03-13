@@ -1,5 +1,8 @@
 import { Component, Node, Layers, UITransform, _decorator } from 'cc';
-import { OrientationManager, OrientationType } from '../../../framework/manager/ui/OrientationManager';
+import {
+    OrientationManager,
+    OrientationType,
+} from '../../../framework/manager/ui/OrientationManager';
 
 const { ccclass } = _decorator;
 
@@ -21,23 +24,31 @@ export abstract class UIComponentBase extends Component {
     }
 
     protected onEnable(): void {
-        OrientationManager.getInstance().on(OrientationManager.Event.CHANGE, this._onInternalOrientationChange, this);
+        OrientationManager.getInstance().on(
+            OrientationManager.Event.CHANGE,
+            this._onInternalOrientationChange,
+            this,
+        );
     }
 
     protected onDisable(): void {
-        OrientationManager.getInstance().off(OrientationManager.Event.CHANGE, this._onInternalOrientationChange, this);
+        OrientationManager.getInstance().off(
+            OrientationManager.Event.CHANGE,
+            this._onInternalOrientationChange,
+            this,
+        );
     }
 
     private _onInternalOrientationChange(orientation: OrientationType): void {
-        this.onOrientationChange(orientation);
+        // if (typeof this.onOrientationChange === 'function') {
+        //     this.onOrientationChange(orientation);
+        // }
     }
 
     /**
      * 當螢幕方向改變時觸發 (可由子類實作)
      */
-    protected onOrientationChange(orientation: OrientationType): void {
-        // 子類根據需要實作
-    }
+    protected abstract onOrientationChange(orientation: OrientationType): void;
 
     /**
      * 初始化 UI 結構

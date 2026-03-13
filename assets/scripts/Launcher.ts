@@ -3,14 +3,12 @@ import { ResManager } from './framework/manager/resource/ResManager';
 import { AppConfig } from './config/AppConfig';
 import { GameManager } from './framework/manager/game/GameManager';
 import { AppScene } from './AppScene';
-import { SceneManager } from './framework/manager/system/SceneManager';
 import { EventBus } from './core/event/EventBus';
 import { EventName } from './core/event/EventName';
 import { ProgressUIController } from './framework/manager/progress/ProgressUIController';
 import { LanguageManager } from './core/i18n/LanguageManager';
 import { LanguageType } from './core/i18n/LanguageType';
 import { ProgressManager } from './framework/manager/progress/ProgressManager';
-import { GameState } from './framework/manager/game/GameState';
 
 const { ccclass } = _decorator;
 
@@ -58,7 +56,13 @@ export class Launcher extends Component {
                 await this._doLoadLanguages(config.lang);
             })();
 
-            log('[Launcher][SUCCESS] ✅ 核心資源加載圓滿完成');
+            // 2. 任務依賴：連線取得 API 設定
+            const apiTask = this._doConnectAPI();
+
+            // 並行執行所有載入階段
+            await Promise.all([essentialTask, apiTask]);
+
+            log('[Launcher][SUCCESS] ✅ 核心資源與 API 加載圓滿完成');
             EventBus.emit(EventName.LAUNCHER_COMPLETE, undefined);
 
             // 切換導航
@@ -117,6 +121,25 @@ export class Launcher extends Component {
     }
 
     /**
+     * 連線讀取 API 流程
+     * @returns Promise<void>
+     */
+    private async _doConnectAPI(): Promise<void> {
+        log('[Launcher][INFO] 開始連線 API 取得遊戲狀態或使用者資料...');
+        try {
+            // TODO: 在這裡置換為真實的 API 端點
+            // 例如：const response = await HttpManager.getInstance().get('https://api.example.com/init');
+
+            // 模擬 API 延遲
+            // await new Promise((resolve) => setTimeout(resolve, 500));
+            log('[Launcher][SUCCESS] API 連線完成');
+        } catch (err) {
+            this._reportError('CONNECT_API', err);
+            throw err;
+        }
+    }
+
+    /**
      * 執行最後的導航，進入主應用場景並根據 ID 切換入口
      * @param gameId 遊戲 ID，若為 null 則進入大廳
      * @param path 引導進入的業務入口路徑
@@ -131,12 +154,11 @@ export class Launcher extends Component {
 
         director.runSceneImmediate(scene, async () => {
             log('[Launcher][SUCCESS] 🚀 啟動場景任務圓滿完成，進入主應用邏輯');
+            const GM = GameManager.getInstance();
             if (gameId) {
-                GameManager.getInstance().setGameState(GameState.PLAYING);
-                await SceneManager.getInstance().enterGame({ gameId, path, isPrefab: true });
+                await GM.enterGame(gameId, path, 'Main');
             } else {
-                GameManager.getInstance().setGameState(GameState.LOBBY);
-                await SceneManager.getInstance().returnToLobby();
+                await GM.returnToLobby();
             }
         });
     }

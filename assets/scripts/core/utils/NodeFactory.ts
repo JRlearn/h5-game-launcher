@@ -73,8 +73,14 @@ export class NodeFactory {
     public static createSpriteNode(
         name: string,
         color: Color = Color.WHITE,
+        options: {
+            size?: Size;
+            anchor?: Vec2;
+            layer?: number;
+            parent?: Node;
+        } = {},
     ): { node: Node; sprite: Sprite } {
-        const node = this.createUINode(name);
+        const node = this.createUINode(name, options);
         const sprite = node.addComponent(Sprite);
         sprite.sizeMode = Sprite.SizeMode.CUSTOM;
         sprite.color = color;

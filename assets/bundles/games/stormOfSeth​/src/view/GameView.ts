@@ -6,7 +6,7 @@ import { SlotReel } from '../components/reel/SlotReel';
 /**
  * SlotView - 消除類 Slot 視圖層
  */
-export class SlotView extends ViewBase {
+export class GameView extends ViewBase {
     public onSpinClick: () => void = () => {};
     private _reels: SlotReel[] = [];
 
@@ -24,7 +24,7 @@ export class SlotView extends ViewBase {
             bgWidget.isAlignBottom =
                 true;
         bgWidget.left = bgWidget.right = bgWidget.top = bgWidget.bottom = 0;
-        bgWidget.alignMode = Widget.AlignMode.ALWAYS;
+        bgWidget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
 
         // 2. 主容器 (垂直佈局)
         const layout = this.getOrAddComponent(this.root, Layout);
@@ -67,7 +67,10 @@ export class SlotView extends ViewBase {
         this.root.addChild(controlPanel);
 
         // 加上 Spin 按鈕
-        const { node: spinBtnNode } = NodeFactory.createSpriteNode('SpinBtn', new Color(50, 180, 50));
+        const { node: spinBtnNode } = NodeFactory.createSpriteNode(
+            'SpinBtn',
+            new Color(50, 180, 50),
+        );
         this.getUITransform(spinBtnNode).setContentSize(200, 80);
         controlPanel.addChild(spinBtnNode);
         const { label: spinText } = NodeFactory.createLabelNode('Label', 'SPIN', 36);

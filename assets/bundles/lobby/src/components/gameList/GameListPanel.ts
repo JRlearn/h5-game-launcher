@@ -1,15 +1,4 @@
-import {
-    _decorator,
-    Node,
-    Layout,
-    size,
-    Size,
-    Widget,
-    ScrollView,
-    Vec3,
-    Rect,
-    UITransform,
-} from 'cc';
+import { _decorator, Node, Layout, size, Size, Widget, ScrollView, Rect, UITransform } from 'cc';
 import { IGameData } from '../../model/LobbyModel';
 import { GameListItem, ILayerNodes } from './GameListItem';
 import { UIComponentBase } from '../../../../../scripts/core/base/ui/UIComponentBase';
@@ -56,13 +45,29 @@ export class GameListPanel extends UIComponentBase {
 
         // 2. 建立分層容器 (這些節點會隨 Content 捲動，但不參與 Layout)
         this._layers = {
-            bgLayer: NodeFactory.createUINode('BgLayer', { parent: content, size: contentTrans.contentSize, anchor: contentTrans.anchorPoint }),
-            iconLayer: NodeFactory.createUINode('IconLayer', { parent: content, size: contentTrans.contentSize, anchor: contentTrans.anchorPoint }),
-            labelLayer: NodeFactory.createUINode('LabelLayer', { parent: content, size: contentTrans.contentSize, anchor: contentTrans.anchorPoint }),
+            bgLayer: NodeFactory.createUINode('BgLayer', {
+                parent: content,
+                size: contentTrans.contentSize,
+                anchor: contentTrans.anchorPoint,
+            }),
+            iconLayer: NodeFactory.createUINode('IconLayer', {
+                parent: content,
+                size: contentTrans.contentSize,
+                anchor: contentTrans.anchorPoint,
+            }),
+            labelLayer: NodeFactory.createUINode('LabelLayer', {
+                parent: content,
+                size: contentTrans.contentSize,
+                anchor: contentTrans.anchorPoint,
+            }),
         };
 
         // 3. 建立實際負責排版的佈局節點
-        this.listContainer = NodeFactory.createUINode('ItemLayout', { parent: content, size: contentTrans.contentSize, anchor: contentTrans.anchorPoint });
+        this.listContainer = NodeFactory.createUINode('ItemLayout', {
+            parent: content,
+            size: contentTrans.contentSize,
+            anchor: contentTrans.anchorPoint,
+        });
 
         const scrollView = svNode.getComponent(ScrollView)!;
         scrollView.vertical = false;
@@ -124,8 +129,14 @@ export class GameListPanel extends UIComponentBase {
 
             if (this._layers) {
                 this.getUITransform(this._layers.bgLayer).setContentSize(currentWidth, panelHeight);
-                this.getUITransform(this._layers.iconLayer).setContentSize(currentWidth, panelHeight);
-                this.getUITransform(this._layers.labelLayer).setContentSize(currentWidth, panelHeight);
+                this.getUITransform(this._layers.iconLayer).setContentSize(
+                    currentWidth,
+                    panelHeight,
+                );
+                this.getUITransform(this._layers.labelLayer).setContentSize(
+                    currentWidth,
+                    panelHeight,
+                );
             }
         }
 
@@ -154,9 +165,13 @@ export class GameListPanel extends UIComponentBase {
             );
 
             // 先設定資料與分層容器，再加入節點樹 (確保 createUI 時 layers 已存在)
-            itemComp.setup(game, (data: IGameData) => {
-                this.onGameSelected(data);
-            }, this._layers);
+            itemComp.setup(
+                game,
+                (data: IGameData) => {
+                    this.onGameSelected(data);
+                },
+                this._layers,
+            );
 
             this.listContainer.addChild(node);
             this._itemInstances.push(node);

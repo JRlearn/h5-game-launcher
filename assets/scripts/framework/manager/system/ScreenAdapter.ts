@@ -33,7 +33,7 @@ export class ScreenAdapter {
             this._canvasNode.getComponent(Widget) || this._canvasNode.addComponent(Widget);
         widget.isAlignLeft = widget.isAlignRight = widget.isAlignTop = widget.isAlignBottom = true;
         widget.left = widget.right = widget.top = widget.bottom = 0;
-        widget.alignMode = Widget.AlignMode.ALWAYS;
+        widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
 
         this.update();
     }

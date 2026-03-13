@@ -57,6 +57,13 @@ export class GameListItem extends UIComponentBase {
     private _onEnterCallback: ((data: IGameData) => void) | null = null;
 
     /**
+     * 當螢幕方向改變時觸發 (由基類要求實作)
+     */
+    protected onOrientationChange(orientation: any): void {
+        // GameListItem 採取 Flow 佈局或是由外部重新渲染，這裡暫不需要處理
+    }
+
+    /**
      * 實作基類 UI 建立邏輯
      */
     protected createUI(): void {
