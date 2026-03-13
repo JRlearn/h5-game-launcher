@@ -1,6 +1,7 @@
 import { log, error } from 'cc';
 import { EventBus } from '../../core/event/EventBus';
 import { EventName } from '../../core/event/EventName';
+import { LanguageType } from './LanguageType';
 
 /**
  * LanguageManager - 多語系管理器，用於管理遊戲中的多語言文本。
@@ -8,7 +9,7 @@ import { EventName } from '../../core/event/EventName';
  */
 export class LanguageManager {
     private static instance: LanguageManager | null = null; // 單例實例
-    private currentLanguage: string = 'en'; // 當前語言，默認為英文
+    private currentLanguage: LanguageType = LanguageType.EN_US; // 當前語言，默認為英文
     private translations: Map<string, any> = new Map(); // 存儲語言對應的翻譯表
 
     private constructor() {} // 私有構造函數，防止外部實例化
@@ -21,14 +22,14 @@ export class LanguageManager {
         if (!this.instance) {
             this.instance = new LanguageManager();
         }
-        return this.instance;
+        return this.instance!;
     }
 
     /**
      * 初始化語言管理器。
      * @param defaultLanguage - 默認語言。
      */
-    public init(defaultLanguage: string): void {
+    public init(defaultLanguage: LanguageType): void {
         this.currentLanguage = defaultLanguage;
         log(`語言管理器初始化完成，當前語言: ${this.currentLanguage}`);
     }
@@ -38,7 +39,7 @@ export class LanguageManager {
      * @param language - 語言代碼（如 'en', 'zh', 'jp'）。
      * @param translations - 該語言的翻譯表。
      */
-    public loadLanguage(language: string, translations: any): void {
+    public loadLanguage(language: LanguageType, translations: any): void {
         this.translations.set(language, translations);
         log(`語言資源加載完成: ${language}`);
     }
@@ -47,7 +48,7 @@ export class LanguageManager {
      * 切換語言。
      * @param language - 要切換的語言代碼。
      */
-    public setLanguage(language: string): void {
+    public setLanguage(language: LanguageType): void {
         if (!this.translations.has(language)) {
             error(`語言資源未加載: ${language}`);
             return;
@@ -61,7 +62,7 @@ export class LanguageManager {
      * 獲取當前語言。
      * @returns 當前語言代碼。
      */
-    public getLanguage(): string {
+    public getLanguage(): LanguageType {
         return this.currentLanguage;
     }
 

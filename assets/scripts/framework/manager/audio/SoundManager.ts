@@ -52,7 +52,7 @@ export class SoundManager {
         if (!this._instance) {
             this._instance = new SoundManager();
         }
-        return this._instance;
+        return this._instance!;
     }
 
     /**

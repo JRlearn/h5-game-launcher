@@ -41,10 +41,10 @@ export class OrientationManager {
     }
 
     public static getInstance(): OrientationManager {
-        if (!this._instance) {
-            this._instance = new OrientationManager();
+        if (!OrientationManager._instance) {
+            OrientationManager._instance = new OrientationManager();
         }
-        return this._instance;
+        return OrientationManager._instance;
     }
 
     private _init(): void {
@@ -110,10 +110,18 @@ export class OrientationManager {
     /** 是否為橫向 */
     public get isLandscape(): boolean { return this._currentOrientation === OrientationType.LANDSCAPE; }
 
-    /** 是否為縱向 */
-    public get isPortrait(): boolean { return this._currentOrientation === OrientationType.PORTRAIT; }
+    /**
+     * 是否為縱向
+     */
+    public get isPortrait(): boolean { return this._currentPortrait(); }
 
-    /** 是否需要顯示旋轉提示 (當寬高比不符合預期方向時) */
+    private _currentPortrait(): boolean {
+        return this._currentOrientation === OrientationType.PORTRAIT;
+    }
+
+    /**
+     * 是否需要顯示旋轉提示 (當寬高比不符合預期方向時)
+     */
     public get shouldShowRotateTip(): boolean {
         // 假設專案主打直屏，若寬高比太大 (橫屏) 則提示
         // 這裡可以根據 AppConfig.DESIGN_WIDTH/HEIGHT 的傾向來決定
@@ -125,10 +133,22 @@ export class OrientationManager {
         }
     }
 
+    /**
+     * 監聽事件
+     * @param type 事件類型
+     * @param callback 回調函式
+     * @param target 監聽對象
+     */
     public on(type: string, callback: (...args: any[]) => void, target?: any): void {
         this._eventTarget.on(type, callback, target);
     }
 
+    /**
+     * 取消監聽事件
+     * @param type 事件類型
+     * @param callback 回調函式
+     * @param target 監聽對象
+     */
     public off(type: string, callback?: (...args: any[]) => void, target?: any): void {
         this._eventTarget.off(type, callback, target);
     }

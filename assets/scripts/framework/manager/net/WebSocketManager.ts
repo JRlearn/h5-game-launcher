@@ -10,7 +10,7 @@ export class WebSocketManager {
         if (!this.instance) {
             this.instance = new WebSocketManager();
         }
-        return this.instance;
+        return this.instance!;
     }
 
     public register<T extends IWebSocketHandler>(

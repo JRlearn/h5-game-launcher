@@ -3,13 +3,14 @@ import { ResManager } from './framework/manager/resource/ResManager';
 import { AppConfig } from './config/AppConfig';
 import { GameManager } from './framework/manager/game/GameManager';
 import { AppScene } from './AppScene';
-import { SceneManager } from './framework/manager/ui/scene/SceneManager';
+import { SceneManager } from './framework/manager/system/SceneManager';
 import { EventBus } from './core/event/EventBus';
 import { EventName } from './core/event/EventName';
 import { ProgressUIController } from './framework/manager/progress/ProgressUIController';
 import { LanguageManager } from './core/i18n/LanguageManager';
 import { LanguageType } from './core/i18n/LanguageType';
 import { ProgressManager } from './framework/manager/progress/ProgressManager';
+import { GameState } from './framework/manager/game/GameState';
 
 const { ccclass } = _decorator;
 
@@ -44,8 +45,9 @@ export class Launcher extends Component {
 
     /**
      * 啟動加載並行流程
+     * @returns Promise<void>
      */
-    private async _launch() {
+    private async _launch(): Promise<void> {
         try {
             const config = GameManager.getInstance().getLaunchConfig();
             if (!config) throw new Error('無法獲取啟動配置');
@@ -55,9 +57,6 @@ export class Launcher extends Component {
                 await this._doLoadCommonBundle();
                 await this._doLoadLanguages(config.lang);
             })();
-
-            // 2. 並行執行所有載入階段
-            await Promise.all([essentialTask, this._doPreloadTarget(config.gameId, config.path)]);
 
             log('[Launcher][SUCCESS] ✅ 核心資源加載圓滿完成');
             EventBus.emit(EventName.LAUNCHER_COMPLETE, undefined);
@@ -71,8 +70,9 @@ export class Launcher extends Component {
 
     /**
      * Step: 加載 Common Bundle
+     * @returns Promise<void>
      */
-    private async _doLoadCommonBundle() {
+    private async _doLoadCommonBundle(): Promise<void> {
         log('[Launcher][INFO] 開始加載核心資源包 (Common Bundle)...');
         try {
             await ResManager.getInstance().loadBundleAsync(AppConfig.BUNDLE_COMMON, (p) => {
@@ -89,30 +89,27 @@ export class Launcher extends Component {
     }
 
     /**
-     * Step: 加載語系
+     * 加載特定語系的多國語系配置
+     * @param targetLang 目標語系代碼，若為 null 則使用預設語系
      */
-    private async _doLoadLanguages(targetLang: string | null) {
+    private async _doLoadLanguages(targetLang: LanguageType | null): Promise<void> {
         log('[Launcher][INFO] 開始加載多國語系配置...');
         try {
             const langs = AppConfig.SUPPORTED_LANGUAGES;
-            for (let i = 0; i < langs.length; i++) {
-                const lang = langs[i];
-                const asset = await ResManager.getInstance().loadJsonAsync(
-                    AppConfig.BUNDLE_COMMON,
-                    `${AppConfig.I18N_DIR}${lang}`,
-                );
-                if (asset?.json) {
-                    LanguageManager.getInstance().loadLanguage(lang, asset.json);
-                }
-                ProgressManager.getInstance().setStepProgress(
-                    'LANGUAGES',
-                    (i + 1) / langs.length,
-                    `正在設置語言模組 (${lang})...`,
-                );
-            }
+            const manager = ProgressManager.getInstance();
 
-            const defaultLang = (targetLang as LanguageType) || AppConfig.DEFAULT_LANGUAGE;
-            LanguageManager.getInstance().init(defaultLang);
+            await ResManager.getInstance().loadLanguagesAsync(
+                langs,
+                AppConfig.I18N_DIR,
+                AppConfig.BUNDLE_COMMON,
+                (lang, json) => {
+                    LanguageManager.getInstance().loadLanguage(lang, json);
+                },
+                (p, lang) => {
+                    manager.setStepProgress('LANGUAGES', p, `正在設置語言模組 (${lang})...`);
+                },
+            );
+            LanguageManager.getInstance().init(targetLang || AppConfig.DEFAULT_LANGUAGE);
         } catch (err) {
             this._reportError('LANGUAGES', err);
             throw err;
@@ -120,47 +117,11 @@ export class Launcher extends Component {
     }
 
     /**
-     * Step: 預載目標業務 Bunlde (大廳或遊戲)
+     * 執行最後的導航，進入主應用場景並根據 ID 切換入口
+     * @param gameId 遊戲 ID，若為 null 則進入大廳
+     * @param path 引導進入的業務入口路徑
      */
-    private async _doPreloadTarget(gameId: string | null, path: string) {
-        const targetName = gameId ? `遊戲 [${gameId}]` : '大廳';
-        log(`[Launcher][INFO] 預載目標業務資源: ${targetName}`);
-
-        try {
-            const manager = ProgressManager.getInstance();
-            const step = 'TARGET_PRELOAD';
-
-            if (!gameId) {
-                // 預載大廳
-                await ResManager.getInstance().loadBundleAsync(AppConfig.BUNDLE_LOBBY, (p) =>
-                    manager.setStepProgress(step, p * 0.5, '下載大廳資源...'),
-                );
-                await ResManager.getInstance().loadPrefabAsync(
-                    AppConfig.BUNDLE_LOBBY,
-                    'prefabs/entry/Main',
-                    (p) => manager.setStepProgress(step, 0.5 + p * 0.5, '初始化大廳主介面...'),
-                );
-            } else {
-                // 預載子遊戲
-                const bundleName = `${AppConfig.GAMES_DIR_PREFIX}${gameId}`;
-                await ResManager.getInstance().loadBundleAsync(bundleName, (p) =>
-                    manager.setStepProgress(step, p * 0.5, `下載${targetName}資源...`),
-                );
-                await ResManager.getInstance().loadPrefabAsync(bundleName, path, (p) =>
-                    manager.setStepProgress(step, 0.5 + p * 0.5, `準備${targetName}組件...`),
-                );
-            }
-            manager.setStepProgress(step, 1, `${targetName}資源已就緒`);
-        } catch (err) {
-            this._reportError('TARGET_PRELOAD', err);
-            throw err;
-        }
-    }
-
-    /**
-     * 執行最後的導航，進入 AppScene 並配置狀態
-     */
-    private _navigateToApp(gameId: string | null, path: string) {
+    private _navigateToApp(gameId: string | null, path: string): void {
         log('[Launcher][INFO] 準備切換至主應用流程...');
         // 建立單場景核心容器節點
         const scene = new Scene(AppConfig.SCENE_MAIN);
@@ -171,20 +132,21 @@ export class Launcher extends Component {
         director.runSceneImmediate(scene, async () => {
             log('[Launcher][SUCCESS] 🚀 啟動場景任務圓滿完成，進入主應用邏輯');
             if (gameId) {
-                GameManager.getInstance().setGameState('PLAYING');
-                const bundleName = `${AppConfig.GAMES_DIR_PREFIX}${gameId}`;
-                await SceneManager.getInstance().enterGame({ bundleName, path, isPrefab: true });
+                GameManager.getInstance().setGameState(GameState.PLAYING);
+                await SceneManager.getInstance().enterGame({ gameId, path, isPrefab: true });
             } else {
-                GameManager.getInstance().setGameState('LOBBY');
+                GameManager.getInstance().setGameState(GameState.LOBBY);
                 await SceneManager.getInstance().returnToLobby();
             }
         });
     }
 
     /**
-     * 報告錯誤
+     * 集中報告啟動過程中的錯誤
+     * @param step 發生錯誤的加載步驟名稱
+     * @param err 錯誤對象
      */
-    private _reportError(step: string, err: any) {
+    private _reportError(step: string, err: Error | unknown): void {
         error(`[Launcher][ERROR] Step [${step}] failed:`, err);
         EventBus.emit(EventName.LAUNCHER_ERROR, { step, error: err });
     }

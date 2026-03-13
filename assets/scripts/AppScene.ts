@@ -1,22 +1,10 @@
-import {
-    _decorator,
-    Camera,
-    Canvas,
-    Color,
-    Component,
-    Node,
-    Widget,
-    log,
-    Size,
-    Layers,
-    Vec3,
-    view,
-} from 'cc';
-import { SceneManager } from './framework/manager/ui/scene/SceneManager';
+import { _decorator, Camera, Canvas, Color, Component, Node, Widget, log, Size, Layers } from 'cc';
+import { SceneManager } from './framework/manager/system/SceneManager';
 import { AppConfig } from './config/AppConfig';
 import { NodeFactory } from './core/utils/NodeFactory';
 import { OrientationManager, OrientationType } from './framework/manager/ui/OrientationManager';
 import { OrientationTip } from './framework/manager/ui/OrientationTip';
+import { ScreenAdapter } from './framework/manager/system/ScreenAdapter';
 
 const { ccclass } = _decorator;
 
@@ -27,7 +15,12 @@ const { ccclass } = _decorator;
 @ccclass('AppScene')
 export class AppScene extends Component {
     private _canvasNode!: Node;
+    private _uiRoot!: Node;
+    private _gameRoot!: Node;
+    private _lobbyRoot!: Node;
+    private _camera!: Camera;
     private _orientationTip!: OrientationTip;
+    private _screenAdapter!: ScreenAdapter;
 
     /**
      * 載入時初始化基礎容器
@@ -53,48 +46,65 @@ export class AppScene extends Component {
      */
     private _setupBaseHierarchy(): void {
         this._canvasNode = this._createCanvas();
-        const uiRoot = this._createUIRoot();
-        const gameRoot = this._createGameRoot();
-        const lobbyRoot = this._createLobbyRoot();
+        this._uiRoot = this._createUIRoot();
+        this._gameRoot = this._createGameRoot();
+        this._lobbyRoot = this._createLobbyRoot();
 
-        // 強制所有 UI 容器使用 UI_2D 層級，確保與相機對應
+        // 使用 DEFAULT 層級，這是專案目前的標準
+        const uiLayer = Layers.Enum.DEFAULT;
         this._canvasNode.layer =
-            uiRoot.layer =
-            gameRoot.layer =
-            lobbyRoot.layer =
-                Layers.Enum.UI_2D;
+            this._uiRoot.layer =
+            this._gameRoot.layer =
+            this._lobbyRoot.layer =
+                uiLayer;
 
         const cameraNode = this._createCamera();
 
         this._canvasNode.addChild(cameraNode);
-        this._canvasNode.addChild(uiRoot);
-        this._canvasNode.addChild(gameRoot);
-        this._canvasNode.addChild(lobbyRoot);
+        this._canvasNode.addChild(this._uiRoot);
+        this._canvasNode.addChild(this._gameRoot);
+        this._canvasNode.addChild(this._lobbyRoot);
 
-        // 4. 建立旋轉提示層 (放在 Canvas 內最上方)
-        const tipNode = new Node('OrientationTip');
-        tipNode.layer = Layers.Enum.UI_2D;
-        this._canvasNode.addChild(tipNode);
-        this._orientationTip = tipNode.addComponent(OrientationTip) as any;
+        // 建立旋轉提示層 (放在 Canvas 內最上方)
+        // const tipNode = new Node('OrientationTip');
+        // tipNode.layer = Layers.Enum.UI_2D;
+        // this._canvasNode.addChild(tipNode);
+        // this._orientationTip = tipNode.addComponent(OrientationTip) as any;
 
         this.node.addChild(this._canvasNode);
 
-        // 5. 初始化 SceneManager 的掛載點
-        SceneManager.getInstance().init(gameRoot, lobbyRoot);
+        // 初始化 SceneManager 的掛載點
+        SceneManager.getInstance().init(this._gameRoot, this._lobbyRoot);
+
+        // 初始化螢幕適配器
+        this._screenAdapter = new ScreenAdapter(this._canvasNode);
+
         log('[AppScene] ✅ 基礎層級建立完成 (Layer: UI_2D)');
     }
 
     /**
-     * 當螢幕尺寸或方向改變時觸發
+     * 當螢幕尺寸或方向改變時觸發 (H5 適配核心)
      */
     private _onScreenResize(): void {
-        const mgr = OrientationManager.getInstance();
+        // 1. 透過適配器更新解析度配置
+        if (this._screenAdapter) {
+            this._screenAdapter.update();
+        }
 
-        // 交給 Canvas 組件與 Widget 自動處理佈局
-        // 我們只需要更新旋轉提示
+        // 2. 更新相機視野 (orthoHeight)
+        if (this._camera) {
+            // 確保相機始終覆蓋設計高度
+            this._camera.orthoHeight = AppConfig.DESIGN_HEIGHT / 2;
+        }
+
+        // 3. 更新旋轉提示
         if (this._orientationTip) {
             this._orientationTip.updateVisibility();
         }
+
+        // 4. 對內容根節點進行動態縮放 (若需要 Fit 效果)
+        const fitScale = this._screenAdapter ? this._screenAdapter.getAdaptiveScale() : 1;
+        this._gameRoot.setScale(fitScale, fitScale, 1);
     }
 
     /**
@@ -104,13 +114,11 @@ export class AppScene extends Component {
         const node = NodeFactory.createUINode('Canvas', {
             size: new Size(AppConfig.DESIGN_WIDTH, AppConfig.DESIGN_HEIGHT),
         });
-        const canvas = node.addComponent(Canvas);
+        const canvas = node.getComponent(Canvas) || node.addComponent(Canvas);
         canvas.alignCanvasWithScreen = true;
 
-        // 使用引擎標準適配方案
-        view.setDesignResolutionSize(AppConfig.DESIGN_WIDTH, AppConfig.DESIGN_HEIGHT, 4); // 4 is ResolutionPolicy.FIXED_WIDTH
-
-        const widget = node.addComponent(Widget);
+        // 初始化全螢幕 Widget
+        const widget = node.getComponent(Widget) || node.addComponent(Widget);
         widget.isAlignLeft = widget.isAlignRight = widget.isAlignTop = widget.isAlignBottom = true;
         widget.left = widget.right = widget.top = widget.bottom = 0;
         widget.alignMode = Widget.AlignMode.ALWAYS;
@@ -145,6 +153,10 @@ export class AppScene extends Component {
         return node;
     }
 
+    /**
+     * 為節點添加全螢幕 Widget 組件
+     * @param node 目標節點
+     */
     private _addFullScreenWidget(node: Node): void {
         const widget = node.addComponent(Widget);
         widget.isAlignLeft = widget.isAlignRight = widget.isAlignTop = widget.isAlignBottom = true;
@@ -157,21 +169,21 @@ export class AppScene extends Component {
      */
     private _createCamera(): Node {
         const node = new Node('Main Camera');
-        const camera = node.addComponent(Camera);
+        this._camera = node.addComponent(Camera);
 
         // 設定為正交投影
-        camera.projection = Camera.ProjectionType.ORTHO;
-        camera.visibility = Layers.Enum.DEFAULT;
+        this._camera.projection = Camera.ProjectionType.ORTHO;
 
         // 設定正交相機高度
-        camera.orthoHeight = AppConfig.DESIGN_HEIGHT / 2;
+        this._camera.orthoHeight = AppConfig.DESIGN_HEIGHT / 2;
+
         log(
-            `[AppScene] Camera Initialized - orthoHeight: ${camera.orthoHeight}, visibility: ${camera.visibility}`,
+            `[AppScene] Camera Initialized - orthoHeight: ${this._camera.orthoHeight}, Visibility set to ALL (-1)`,
         );
 
-        camera.clearFlags = Camera.ClearFlag.SOLID_COLOR;
+        this._camera.clearFlags = Camera.ClearFlag.SOLID_COLOR;
         const c = AppConfig.CAMERA_CLEAR_COLOR;
-        camera.clearColor = new Color(c.r, c.g, c.b, c.a);
+        this._camera.clearColor = new Color(c.r, c.g, c.b, c.a);
 
         node.setPosition(0, 0, AppConfig.CAMERA_Z);
 

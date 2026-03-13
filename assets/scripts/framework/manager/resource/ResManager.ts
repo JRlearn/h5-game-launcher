@@ -1,4 +1,16 @@
-import { assetManager, Asset, Prefab, AudioClip, SpriteFrame, JsonAsset, Constructor, log, warn, error } from 'cc';
+import {
+    assetManager,
+    Asset,
+    Prefab,
+    AudioClip,
+    SpriteFrame,
+    JsonAsset,
+    Constructor,
+    log,
+    warn,
+    error,
+} from 'cc';
+import { LanguageType } from '../../../core/i18n/LanguageType';
 
 /**
  * ResManager - 資源管理器
@@ -25,7 +37,7 @@ export class ResManager {
         if (!this._instance) {
             this._instance = new ResManager();
         }
-        return this._instance;
+        return this._instance!;
     }
 
     /**
@@ -77,7 +89,7 @@ export class ResManager {
                     }
                     onProgress?.(1);
                     resolve();
-                }
+                },
             );
         });
     }
@@ -93,7 +105,7 @@ export class ResManager {
         bundleName: string,
         path: string,
         AssetType: Constructor<T>,
-        onProgress?: (p: number) => void
+        onProgress?: (p: number) => void,
     ): Promise<T | null> {
         const typeName = AssetType.name;
         const assetName = path.split('/').pop()!;
@@ -106,7 +118,9 @@ export class ResManager {
 
         const bundle = this._bundleHandles.get(bundleName) ?? assetManager.getBundle(bundleName);
         if (!bundle) {
-            error(`[ResManager] Bundle 未加載，無法取得資源: ${bundleName}/${path}，請先呼叫 loadBundleAsync()`);
+            error(
+                `[ResManager] Bundle 未加載，無法取得資源: ${bundleName}/${path}，請先呼叫 loadBundleAsync()`,
+            );
             return null;
         }
 
@@ -127,22 +141,38 @@ export class ResManager {
                     log(`[ResManager] 資源已加載並快取: ${bundleName}/${path}`);
                     onProgress?.(1);
                     resolve(asset);
-                }
+                },
             );
         });
     }
 
     /**
-     * 異步加載預設體
+     * 異步加載預製體
+     * @param bundleName Bundle 名稱
+     * @param path 資源路徑
+     * @param onProgress 進度回調
+     * @returns 預裝體資源
      */
-    public async loadPrefabAsync(bundleName: string, path: string, onProgress?: (p: number) => void): Promise<Prefab | null> {
+    public async loadPrefabAsync(
+        bundleName: string,
+        path: string,
+        onProgress?: (p: number) => void,
+    ): Promise<Prefab | null> {
         return this.loadAssetAsync(bundleName, path, Prefab, onProgress);
     }
 
     /**
-     * 異步加載多個預設體
+     * 異步加載多個預製體
+     * @param bundleName Bundle 名稱
+     * @param paths 資源路徑列表
+     * @param onProgress 總體進度回調
+     * @returns Promise<void>
      */
-    public async loadPrefabsAsync(bundleName: string, paths: string[], onProgress?: (p: number) => void): Promise<void> {
+    public async loadPrefabsAsync(
+        bundleName: string,
+        paths: string[],
+        onProgress?: (p: number) => void,
+    ): Promise<void> {
         let completed = 0;
         await Promise.all(
             paths.map((path) =>
@@ -152,20 +182,32 @@ export class ResManager {
                         completed++;
                         onProgress?.(completed / paths.length);
                     }
-                })
-            )
+                }),
+            ),
         );
     }
 
     /**
      * 異步加載 JSON 資源
+     * @param bundleName Bundle 名稱
+     * @param path 資源路徑
+     * @param onProgress 進度回調
+     * @returns JSON 資源
      */
-    public async loadJsonAsync(bundleName: string, path: string, onProgress?: (p: number) => void): Promise<JsonAsset | null> {
+    public async loadJsonAsync(
+        bundleName: string,
+        path: string,
+        onProgress?: (p: number) => void,
+    ): Promise<JsonAsset | null> {
         return this.loadAssetAsync(bundleName, path, JsonAsset, onProgress);
     }
 
     /**
      * 從快取獲取資源
+     * @param bundleName Bundle 名稱
+     * @param type 資源型別名稱
+     * @param name 資源名稱
+     * @returns 資源實例
      */
     public getAsset(bundleName: string, type: string, name: string): Asset | null {
         const bundleCache = this._bundleCache.get(bundleName);
@@ -174,12 +216,20 @@ export class ResManager {
         if (!typeCache) return null;
         const asset = typeCache.get(name);
         if (!asset) {
-            warn(`[ResManager] 資源未在快取中: [${name}] type: [${type}] bundle: [${bundleName}]，請先呼叫 loadPrefabAsync()`);
+            warn(
+                `[ResManager] 資源未在快取中: [${name}] type: [${type}] bundle: [${bundleName}]，請先呼叫 loadPrefabAsync()`,
+            );
             return null;
         }
         return asset;
     }
 
+    /**
+     * 從 Bundle 獲取預製體
+     * @param bundleName Bundle 名稱
+     * @param name 資源名稱
+     * @returns 預製體資源
+     */
     public getPrefabFromBundle(bundleName: string, name: string): Prefab | null {
         return this.getAsset(bundleName, 'Prefab', name) as Prefab | null;
     }
@@ -230,9 +280,11 @@ export class ResManager {
         this._bundleHandles.delete(bundleName);
 
         const bundle = assetManager.getBundle(bundleName);
-        if (bundle) assetManager.removeBundle(bundle);
-
-        log(`[ResManager] Bundle 已釋放: ${bundleName}`);
+        if (bundle) {
+            assetManager.removeBundle(bundle);
+            assetManager.releaseAll();
+            log(`[ResManager] Bundle 已釋放: ${bundleName}`);
+        }
     }
 
     /**
@@ -255,6 +307,117 @@ export class ResManager {
         }
         bundleCache.get(type)!.set(name, asset);
     }
+
+    /**
+     * 執行並行加載計畫
+     * @param plan 加載計畫
+     * @param onProgress 進度回調
+     * @returns 進入點預製體
+     */
+    public async loadGameResources(
+        plan: ILoadPlan,
+        onProgress?: (progress: number) => void,
+    ): Promise<Prefab | null> {
+        const { bundleNames, entryPrefabPath, uiPrefabPaths = [] } = plan;
+
+        const hasEntry = !!entryPrefabPath;
+        const totalSteps = bundleNames.length + (hasEntry ? 1 : 0) + uiPrefabPaths.length;
+        let completedSteps = 0;
+
+        const tick = () => {
+            completedSteps++;
+            onProgress?.(completedSteps / totalSteps);
+        };
+
+        let entryPrefab: Prefab | null = null;
+        const mainBundleName = bundleNames[bundleNames.length - 1]; // 假設最後一個是主 Bundle (src)
+
+        // 1. 並行加載所有 Bundle
+        const bundleTasks = bundleNames.map((name) =>
+            this.loadBundleAsync(name).then(() => {
+                tick();
+                log(`[ResManager] Bundle 就緒: ${name}`);
+            }),
+        );
+
+        // 等待所有 Bundle 加載完成
+        await Promise.all(
+            bundleTasks.map((t) => t.catch((err) => error('[ResManager] Bundle 加載失敗:', err))),
+        );
+
+        // 2. 加載 Prefabs (在所有 Bundle 就緒後)
+        const entryTask = hasEntry
+            ? (async () => {
+                  entryPrefab = await this.loadPrefabAsync(mainBundleName, entryPrefabPath!);
+                  tick();
+                  log(`[ResManager] Entry Prefab 就緒: ${entryPrefabPath}`);
+              })()
+            : Promise.resolve();
+
+        const uiTasks = uiPrefabPaths.map((path) =>
+            (async () => {
+                await this.loadPrefabAsync(mainBundleName, path);
+                tick();
+                log(`[ResManager] UI Prefab 就緒: ${path}`);
+            })(),
+        );
+
+        await Promise.all(
+            [entryTask, ...uiTasks].map((t) =>
+                t.catch((err) => {
+                    error('[ResManager] 資源加載任務失敗:', err);
+                }),
+            ),
+        );
+
+        onProgress?.(1);
+
+        return entryPrefab;
+    }
+
+    /**
+     * 批量加載多國語系資源
+     * @param langs 語系清單
+     * @param i18nDir 語系資源目錄
+     * @param commonBundle 存放語系的 Bundle 名稱
+     * @param onLoad 每個語系加載完成後的回調 (可用於註冊到 LanguageManager)
+     * @param onProgress 總體進度回調
+     */
+    public async loadLanguagesAsync(
+        langs: LanguageType[],
+        i18nDir: string,
+        commonBundle: string,
+        onLoad: (lang: LanguageType, json: any) => void,
+        onProgress?: (p: number, lang: LanguageType) => void,
+    ): Promise<void> {
+        for (let i = 0; i < langs.length; i++) {
+            const lang = langs[i];
+            const path = `${i18nDir}${lang}`;
+            const asset = await this.loadJsonAsync(commonBundle, path);
+            if (asset?.json) {
+                onLoad(lang, asset.json);
+            }
+            onProgress?.((i + 1) / langs.length, lang);
+        }
+    }
 }
 
+/**
+ * 加載任務介面
+ */
+export interface ILoadTask<T> {
+    label: string;
+    run: () => Promise<T>;
+}
 
+/**
+ * 加載計畫介面
+ */
+export interface ILoadPlan {
+    /** 資源包清單 (例如 ['res/zh-TW', 'src']) */
+    bundleNames: string[];
+    /** 入口預製體路徑 (相對於清單中最後一個 bundle) */
+    entryPrefabPath?: string;
+    /** UI 預製體路徑清單 (相對於清單中最後一個 bundle) */
+    uiPrefabPaths?: string[];
+}

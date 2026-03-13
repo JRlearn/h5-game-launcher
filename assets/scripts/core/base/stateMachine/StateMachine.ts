@@ -1,74 +1,78 @@
 /**
- * 狀態機實作介面
- * @interface
- * @memberof Common.StateMachine
+ * 狀態機基礎介面
  */
 export interface IState {
     /**
-     * 狀態開始
-     * @param {any} data - 資料
+     * 狀態開始回調
+     * @param data 傳遞給狀態的資料
      */
-    stateBegin(data: any): void;
+    stateBegin(data?: any): void;
 
-    /** 狀態結束 */
+    /**
+     * 狀態結束回調
+     */
     stateEnd(): void;
 }
 
 /**
- * 狀態機，'SE'為狀態的enum
- * @class StateMachine
- * @memberof Common.StateMachine
+ * 通用狀態機類別
+ * @template SE 狀態列舉型別
  */
 export class StateMachine<SE> {
-    private stateMap: Map<SE, IState> = new Map<SE, IState>();
-    private curGameState: SE;
-    private curGameStateBase: IState | undefined;
+    /** 狀態映射表 */
+    private _stateMap: Map<SE, IState> = new Map<SE, IState>();
+    /** 當前狀態列舉值 */
+    private _curGameState!: SE;
+    /** 當前狀態實例 */
+    private _curGameStateBase: IState | undefined;
 
     /**
-     * 設置狀態
-     * @param {SE} state - 狀態enum
-     * @param {Common.StateMachine.IState} stateBase - 狀態物件
+     * 設置狀態與對應的處理物件
+     * @param state 狀態列舉
+     * @param stateBase 實現 IState 的物件
      */
     public setupState(state: SE, stateBase: IState): void {
-        this.stateMap.set(state, stateBase);
+        this._stateMap.set(state, stateBase);
     }
 
     /**
-     * 取得當前狀態
-     * @returns {SE} 當前狀態
+     * 獲取當前狀態列舉值
+     * @returns 當前狀態
      */
     public getCurGameState(): SE {
-        return this.curGameState;
+        return this._curGameState;
     }
 
     /**
-     * 更換狀態，由實作面定義指定資料
-     * @param {SE} toState - 目標狀態
-     * @param {TData} data - 資料
+     * 切換至目標狀態
+     * @template TData 資料型別
+     * @param toState 目標狀態
+     * @param data 傳遞資料
      */
-    public changeState<TData = any>(toState: SE, data?: TData): void {
+    public changeState<TData>(toState: SE, data?: TData): void {
         let toStateBase = this.getStateBase(toState);
         if (toStateBase == undefined) {
-            console.warn('狀態:' + toState, '對應狀態物件為空值');
+            console.warn(`[StateMachine] 狀態: ${toState} 對應狀態物件為空值`);
             return;
         }
 
-        //舊狀態結束
-        this.curGameStateBase?.stateEnd();
-        //更換為新狀態
-        this.curGameState = toState;
-        this.curGameStateBase = toStateBase;
+        // 舊狀態結束
+        this._curGameStateBase?.stateEnd();
 
-        //新狀態開始
-        this.curGameStateBase?.stateBegin(data);
+        // 更換為新狀態
+        this._curGameState = toState;
+        this._curGameStateBase = toStateBase;
+
+        // 新狀態開始
+        this._curGameStateBase?.stateBegin(data);
     }
 
     /**
-     * 取得當前狀態物件
-     * @param {SE} state - 狀態
-     * @returns {Common.StateMachine.IState} 狀態物件
+     * 獲取特定狀態的處理物件
+     * @param state 狀態列舉
+     * @returns 狀態實例或 undefined
      */
     protected getStateBase(state: SE): IState | undefined {
-        return this.stateMap.get(state);
+        return this._stateMap.get(state);
     }
 }

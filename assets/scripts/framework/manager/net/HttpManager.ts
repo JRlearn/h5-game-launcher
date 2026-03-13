@@ -17,7 +17,7 @@ export class HttpManager {
         if (!this.instance) {
             this.instance = new HttpManager();
         }
-        return this.instance;
+        return this.instance!;
     }
 
     /**

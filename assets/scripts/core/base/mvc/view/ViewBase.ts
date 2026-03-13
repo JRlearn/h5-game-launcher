@@ -1,4 +1,4 @@
-import { Component, Node } from 'cc';
+import { Component, Node, UITransform } from 'cc';
 import { UIManager } from '../../../../framework/manager/ui/UIManager';
 import { BaseUIController } from '../controller/BaseUIController';
 /**
@@ -74,8 +74,10 @@ export abstract class ViewBase {
 
     /**
      * 獲取節點的 UITransform
+     * @param node 目標節點
+     * @returns UITransform 組件
      */
-    protected getUITransform(node: Node = this.root): any {
-        return node.getComponent('cc.UITransform') || node.addComponent('cc.UITransform');
+    protected getUITransform(node: Node = this.root): UITransform {
+        return node.getComponent(UITransform) || node.addComponent(UITransform);
     }
 }

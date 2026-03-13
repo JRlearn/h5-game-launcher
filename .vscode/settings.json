@@ -1,8 +1,32 @@
 {
+    "files.exclude": {
+        "**/*.meta": true,
+        "**/*.scene": true,
+        "**/node_modules": true,
+        "**/library": true,
+        "**/temp": true,
+        "**/profiles": true,
+        "**/settings": true,
+        "**/.creator": true
+    },
+    "search.exclude": {
+        "**/*.meta": true,
+        "**/*.scene": true,
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/library": true,
+        "**/temp": true,
+        "**/profiles": true,
+        "**/.creator": true,
+        "**/settings": true
+    },
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true,
     "editor.formatOnPaste": true,
     "[typescript]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "files.associations": {
+        "*.pac": "plaintext"
     }
 }

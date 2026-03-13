@@ -21,7 +21,7 @@ export class ProgressManager {
         if (!this._instance) {
             this._instance = new ProgressManager();
         }
-        return this._instance;
+        return this._instance!;
     }
 
     /**

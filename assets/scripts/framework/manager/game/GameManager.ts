@@ -1,84 +1,72 @@
-import { _decorator, director, log } from 'cc';
+import { director, log } from 'cc';
 import { AppConfig } from '../../../config/AppConfig';
+import { LanguageType } from '../../../core/i18n/LanguageType';
+import { BrowserUtils } from '../../../core/utils/BrowserUtils';
+import { GameState } from './GameState';
 
 /**
- * GameManager - 遊戲管理器，用於管理遊戲的全局邏輯與啟動分流。
+ * GameManager - 遊戲管理器
+ * 負責管理遊戲全域狀態與生命週期邏輯。
  */
 export class GameManager {
-    /** 單例 */
     private static _instance: GameManager | null = null;
-    /** 遊戲狀態 */
-    private _gameState: string = 'INIT';
-    /** 私有構造 */
+    
+    /** 當前遊戲狀態 */
+    private _gameState: GameState = GameState.INIT;
+
     private constructor() {}
 
-    /**
-     * 獲取單例
-     */
     public static getInstance(): GameManager {
-        if (!this._instance) {
-            this._instance = new GameManager();
+        if (!GameManager._instance) {
+            GameManager._instance = new GameManager();
         }
-        return this._instance;
+        return GameManager._instance!;
     }
 
     /**
-     * 初始化
+     * 初始化管理器
      */
     public init(): void {
         log('[GameManager] 初始化完成');
-        this.setGameState('INIT');
+        this.setGameState(GameState.INIT);
     }
 
     /**
-     * 獲取啟動配置參數（解析 URL）
+     * 獲取啟動配置參數
+     * 職責：整合來自環境（如 URL）的參數與應用預設值
      */
-    public getLaunchConfig() {
-        const gameId = this._parseURLParams('game');
-        const path = this._parseURLParams('path') || AppConfig.DEFAULT_GAME_PREFAB_PATH;
-        const lang = this._parseURLParams('lang');
+    public getLaunchConfig(): { gameId: string | null; path: string; lang: LanguageType | null } {
+        const gameId = BrowserUtils.parseURLParam('game');
+        const path = BrowserUtils.parseURLParam('path') || AppConfig.DEFAULT_GAME_PREFAB_PATH;
+        const lang = BrowserUtils.parseURLParam('lang') || AppConfig.DEFAULT_LANGUAGE;
 
         return {
             gameId,
             path,
-            lang: lang as any,
+            lang: lang as LanguageType,
         };
     }
 
     /**
      * 設定遊戲狀態
      */
-    public setGameState(state: string): void {
+    public setGameState(state: GameState): void {
         this._gameState = state;
-        log(`[GameManager] 遊戲狀態已更改為: ${state}`);
+        log(`[GameManager] 遊戲狀態變更: ${state}`);
     }
 
-    /**
-     * 獲取遊戲狀態
-     */
-    public getGameState(): string {
+    public getGameState(): GameState {
         return this._gameState;
-    }
-
-    /**
-     * 解析 URL 參數
-     */
-    private _parseURLParams(key: string): string | null {
-        if (typeof window === 'undefined' || !window.location) return null;
-        try {
-            const urlParams = new URL(window.location.href).searchParams;
-            return urlParams.get(key);
-        } catch (e) {
-            return null;
-        }
     }
 
     /**
      * 暫停遊戲
      */
     public pauseGame(): void {
-        log('遊戲已暫停');
-        this.setGameState('PAUSED');
+        if (this._gameState === GameState.PAUSED) return;
+        
+        log('[GameManager] 暫停遊戲');
+        this.setGameState(GameState.PAUSED);
         director.pause();
     }
 
@@ -86,8 +74,10 @@ export class GameManager {
      * 恢復遊戲
      */
     public resumeGame(): void {
-        log('遊戲已恢復');
-        this.setGameState('RUNNING');
+        if (this._gameState !== GameState.PAUSED) return;
+
+        log('[GameManager] 恢復遊戲');
+        this.setGameState(GameState.PLAYING);
         director.resume();
     }
 
@@ -95,7 +85,7 @@ export class GameManager {
      * 結束遊戲
      */
     public endGame(): void {
-        log('遊戲已結束');
-        this.setGameState('GAMEOVER');
+        log('[GameManager] 結束遊戲');
+        this.setGameState(GameState.GAMEOVER);
     }
 }

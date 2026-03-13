@@ -15,9 +15,9 @@ export class AppConfig {
     /** 共用資源包的名稱 (包含共用 UI, 音效, 語系等) */
     public static readonly BUNDLE_COMMON = 'bundles/common';
     /** 遊戲大廳的資源包名稱 */
-    public static readonly BUNDLE_LOBBY = 'lobby';
+    public static readonly BUNDLE_LOBBY = 'lobby_res';
     /** 子遊戲的資源包存放目錄前綴 (URL 會傳入例如 bullsAndCows，我們會在前面加上這個前綴) */
-    public static readonly GAMES_DIR_PREFIX = 'games/';
+    public static readonly GAMES_DIR_PREFIX = 'bundles/games/';
 
     // ==========================================
     // 場景 (Scene) 相關配置
@@ -63,7 +63,7 @@ export class AppConfig {
     /** 相機預設背景顏色 (RGBA) - 使用暗藍色以便區分渲染狀態 */
     public static readonly CAMERA_CLEAR_COLOR = { r: 30, g: 30, b: 50, a: 255 };
     /** 預設 UI 設計解析度寬度 */
-    public static readonly DESIGN_WIDTH = 720;
+    public static readonly DESIGN_WIDTH = 1920;
     /** 預設 UI 設計解析度高度 */
-    public static readonly DESIGN_HEIGHT = 1280;
+    public static readonly DESIGN_HEIGHT = 1080;
 }

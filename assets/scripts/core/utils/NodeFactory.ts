@@ -96,7 +96,7 @@ export class NodeFactory {
         // Viewport 必須包含 Mask
         const viewport = this.createUINode('Viewport', { size, parent: root });
         const mask = viewport.addComponent(Mask);
-        mask.type = 0; // 0 is Mask.Type.RECT
+        mask.type = Mask.Type.GRAPHICS_RECT; // Mask.Type.GRAPHICS_RECT is 0
 
         const content = this.createUINode('Content', { parent: viewport });
         // 預設為垂直滾動錨點，水平滾動時需在外部自行調整或由組件控制
