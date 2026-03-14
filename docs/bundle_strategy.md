@@ -7,24 +7,24 @@
 系統採用三層遞進式加載策略，將資源依據「生命週期」與「依賴關係」進行劃分。
 
 ### 1.1 核心層 (Core / Essential)
-*   **名稱**: `scripts` (或編譯後的內置 Bundle)
-*   **內容**: 所有的管理器 (Manager)、基礎基類 (MVC Base)、啟動流程 (Launcher/AppScene)、通訊協議 (Net)。
+*   **名稱**: `internal` (內建) / `main` / `core`
+*   **內容**: 所有的管理器 (Manager)、基礎基類 (MVC Base)、啟動流程 (`Launcher.ts`/`scene/AppScene.ts`)、通訊協議 (`net/`)。
 *   **特性**: 首包加載，全局駐留，不可卸載。
 
 ### 1.2 共用層 (Common Bundle)
 *   **名稱**: `common`
 *   **內容**: 
-    - 跨遊戲組件 (如：通用老虎機輪盤、按鈕組件)。
+    - 跨遊戲組件 (如：通用按鈕、對話框)。
     - 全域 UI 素材 (HUD、背景、共用特效)。
-    - 多國語系配置 (i18n JSON)。
+    - 多國語系配置 (`i18n` JSON)。
 *   **特性**: 單次加載後常駐（不隨遊戲切換釋放），以減少重複下載。
 
 ### 1.3 業務層 (Feature Bundles)
-*   **名稱**: `lobby` (大廳), `games/slot_master` (子遊戲)
-*   **內容**: 特定模組專屬的預製體 (Prefab)、紋理 (Texture)、音效 (AudioClip)。
+*   **名稱**: `lobby` (大廳), `games/[game_name]` (子遊戲)
+*   **內容**: 特定模組專屬的腳本 (`src/`)、資源 (`res/`)、Prefab (若有)。
 *   **特性**: 
-    - **點擊時加載**: 使用 `ResManager.loadBundleAsync` 觸發。
-    - **退出時釋放**: 遊戲結束返回大廳時，`SceneManager` 會自動調用 `releaseBundle` 以完全清理內存。
+    - **點擊時加載**: 使用 `ResManager.loadBundle` 觸發。
+    - **退出時釋放**: 遊戲結束返回大廳時，`SceneManager` 會自動清理資源。
 
 ---
 
@@ -33,9 +33,9 @@
 為了在行動端 Browser 穩定運行，系統實作了雙重保障機制：
 
 1.  **Sandbox 隔離**: 每個遊戲加載於 `GameSandbox` 節點下。返回大廳時執行 `sandbox.destroy()`，銷毀所有的 Node 與 Component 實例。
-2.  **引用計數回歸**: 透過 `ResManager.releaseBundle(name)` 的調用：
-    - 將 Bundle 內所有快取資源的 `decRef()`。
-    - 觸發 Cocos `assetManager.removeBundle()` 徹底移除緩存引用，確保紋理內存能夠被 GC 回收。
+2.  **引用計數回歸**: 透過 `ResManager` 的自動釋放機制：
+    - 將 Bundle 內所有快取資源執行 `decRef()`。
+    - 徹底移除緩存引用，確保紋理內存能夠被 GC 回收。
 
 ---
 
@@ -48,7 +48,7 @@
 *   **Games**: 5
 
 ### 3.2 壓縮策略
-*   為了優化 H5 載入速度，建議針對 `lobby` 與 `games` 啟用 **「合併所有 JSON」** 選項。
+*   為了優化 H5 載入速度，建議對 `lobby` 與 `games` 啟用 **「合併所有 JSON」** 選項。
 *   紋理資源建議啟用 **WebP 格式** 以大幅壓縮存儲體積。
 
 ---
@@ -57,7 +57,7 @@
 
 ```mermaid
 graph TD
-    A[Launcher] --> B[scripts/Core]
+    A[Launcher] --> B[Core Systems]
     B --> C[common bundle]
     C --> D[lobby bundle]
     C --> E[game_1 bundle]

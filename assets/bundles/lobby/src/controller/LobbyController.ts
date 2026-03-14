@@ -1,9 +1,8 @@
 import { LobbyModel, GameCategory, IGameData } from '../model/LobbyModel';
 import { LobbyView } from '../view/LobbyView';
 import { error, log } from 'cc';
-import { ControllerBase } from '../../../../scripts/core/base/mvc/controller/ControllerBase';
-import { AppConfig } from '../../../../scripts/config/AppConfig';
-import { GameManager } from '../../../../scripts/framework/manager/game/GameManager';
+import { ControllerBase } from '../../../../core/game/base/mvc/controller/ControllerBase';
+import { GameManager } from '../../../../core/game/GameManager';
 
 /**
  * LobbyController - 大廳控制器
@@ -48,11 +47,7 @@ export class LobbyController extends ControllerBase<LobbyView, LobbyModel> {
      * @param bundleName 遊戲資源包名稱
      */
     private _onGameSelected(data: IGameData): void {
-        log('Lobby', `玩家選擇遊戲 → ${data.id} (${data.bundleName})`);
-        GameManager.getInstance().enterGame(
-            data.id,
-            AppConfig.DEFAULT_GAME_PREFAB_PATH,
-            data.mainComponent || 'Main'
-        );
+        log('Lobby', `玩家選擇遊戲 → ${data.id}  )`);
+        GameManager.getInstance().enterGame(data.id);
     }
 }

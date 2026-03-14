@@ -3,11 +3,11 @@ import { IGameData } from '../model/LobbyModel';
 import { GameListPanel } from '../components/gameList/GameListPanel';
 import { CategoryTabBar } from '../components/category/CategoryTabBar';
 import { SpriteFrame, Color } from 'cc';
-import { ViewBase } from '../../../../scripts/core/base/mvc/view/ViewBase';
-import { NodeFactory } from '../../../../scripts/core/utils/NodeFactory';
-import { AppConfig } from '../../../../scripts/config/AppConfig';
-import { ResManager } from '../../../../scripts/framework/manager/resource/ResManager';
-import { LanguageManager } from '../../../../scripts/core/i18n/LanguageManager';
+import { ViewBase } from '../../../../core/game/base/mvc/view/ViewBase';
+import { NodeFactory } from '../../../../core/utils/NodeFactory';
+import { AppConfig } from '../../../../app/config/Config';
+import { ResManager } from '../../../../core/systems/resource/ResManager';
+import { LanguageManager } from '../../../../core/systems/language/LanguageManager';
 
 /**
  * LobbyView - 大廳視圖層
@@ -102,11 +102,7 @@ export class LobbyView extends ViewBase {
             const bgPath = 'textures/bg/spriteFrame';
 
             // 下載並套用背景貼圖
-            const sf = await ResManager.getInstance().loadAssetAsync(
-                resBundle,
-                bgPath,
-                SpriteFrame,
-            );
+            const sf = await ResManager.getInstance().load(resBundle, bgPath, SpriteFrame);
             if (sf && sprite && sprite.isValid) {
                 sprite.spriteFrame = sf;
             }

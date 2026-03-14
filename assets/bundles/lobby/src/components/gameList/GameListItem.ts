@@ -1,10 +1,10 @@
 import { _decorator, Node, Label, Sprite, SpriteFrame, Color, assetManager, size, Vec3 } from 'cc';
 import { IGameData } from '../../model/LobbyModel';
-import { ResManager } from '../../../../../scripts/framework/manager/resource/ResManager';
-import { UIComponentBase } from '../../../../../scripts/core/base/ui/UIComponentBase';
-import { NodeFactory } from '../../../../../scripts/core/utils/NodeFactory';
-import { AppConfig } from '../../../../../scripts/config/AppConfig';
-import { LanguageManager } from '../../../../../scripts/core/i18n/LanguageManager';
+import { ResManager } from '../../../../../core/systems/resource/ResManager';
+import { UIComponentBase } from '../../../../../core/game/base/ui/UIComponentBase';
+import { NodeFactory } from '../../../../../core/utils/NodeFactory';
+import { AppConfig } from '../../../../../app/config/Config';
+import { LanguageManager } from '../../../../../core/systems/language/LanguageManager';
 
 const { ccclass } = _decorator;
 
@@ -207,7 +207,6 @@ export class GameListItem extends UIComponentBase {
         if (this._tagHot) this._tagHot.active = !!data.isHot;
         if (this._tagNew) this._tagNew.active = !!data.isNew;
 
-        this._bundleName = data.bundleName;
         this._iconPath = data.iconPath;
 
         // 初始化時重設圖示狀態，不自動載入
@@ -221,7 +220,7 @@ export class GameListItem extends UIComponentBase {
         if (this._isLoaded || this._isLoading || !this._iconPath) return;
         this._isLoading = true;
         const lang = LanguageManager.getInstance().getLanguage();
-        const targetBundle = `${this._bundleName}_${lang}`;
+        const targetBundle = `${AppConfig.BUNDLE_LOBBY}_${lang}`;
         await this._doLoadIcon(targetBundle, this._iconPath);
         this._isLoading = false;
         this._isLoaded = true;
@@ -284,11 +283,13 @@ export class GameListItem extends UIComponentBase {
         try {
             await ResManager.getInstance().loadBundleAsync(bundleName);
             const bundle = assetManager.getBundle(bundleName);
+
             if (!bundle) return;
 
             return new Promise((resolve) => {
                 bundle.load(iconPath, SpriteFrame, (err: Error | null, sf: SpriteFrame) => {
                     if (!err && this._iconSprite && this.isValid) {
+                        sf.packable = true;
                         this._iconSprite.spriteFrame = sf;
                     }
                     resolve();

@@ -1,9 +1,9 @@
 import { _decorator, Node, Layout, size, Size, Widget, ScrollView, Rect, UITransform } from 'cc';
 import { IGameData } from '../../model/LobbyModel';
 import { GameListItem, ILayerNodes } from './GameListItem';
-import { UIComponentBase } from '../../../../../scripts/core/base/ui/UIComponentBase';
-import { NodeFactory } from '../../../../../scripts/core/utils/NodeFactory';
-import { OrientationType } from '../../../../../scripts/framework/manager/ui/OrientationManager';
+import { UIComponentBase } from '../../../../../core/game/base/ui/UIComponentBase';
+import { NodeFactory } from '../../../../../core/utils/NodeFactory';
+import { OrientationType } from '../../../../../core/systems/screen/OrientationManager';
 
 const { ccclass } = _decorator;
 

@@ -1,9 +1,3 @@
-import { AppConfig } from '../../../../scripts/config/AppConfig';
-
-// ==========================================
-// Lobby 資料模型定義
-// ==========================================
-
 /** 遊戲類別列舉 */
 export type GameCategory = 'all' | 'slot' | 'fish' | 'table' | 'card';
 
@@ -11,7 +5,6 @@ export type GameCategory = 'all' | 'slot' | 'fish' | 'table' | 'card';
 export interface IGameData {
     id: string;
     name: string;
-    bundleName: string;
     iconPath: string;
     category: GameCategory;
     /** 累積彩金（選填） */
@@ -20,8 +13,6 @@ export interface IGameData {
     isHot?: boolean;
     /** 是否標記為新遊戲 */
     isNew?: boolean;
-    /** 入口元件名稱 (預設為 'Main') */
-    mainComponent?: string;
 }
 
 /** 類別頁籤定義 */
@@ -60,28 +51,23 @@ export class LobbyModel {
         // TODO: 替換為 API 請求（NetworkManager.fetchGameList()）
         this._allGames = [
             {
-                id: 'game_01',
-                name: '遊戲一',
-                bundleName: AppConfig.BUNDLE_LOBBY,
+                id: 'stormOfSeth',
+                name: '戰神塞特',
                 iconPath: 'textures/icons/icon_slot_master/spriteFrame',
-                category: 'card',
+                category: 'slot',
                 isNew: true,
-                mainComponent: 'Main',
             },
             {
                 id: 'game_02',
                 name: '遊戲二',
-                bundleName: AppConfig.BUNDLE_LOBBY,
                 iconPath: 'textures/icons/icon_fish_hunter/spriteFrame',
                 category: 'slot',
                 isHot: true,
-                mainComponent: 'SlotMain',
                 jackpot: 1258400,
             },
             {
                 id: 'game_03',
                 name: '遊戲三',
-                bundleName: AppConfig.BUNDLE_LOBBY,
                 iconPath: 'textures/icons/icon_bulls_and_cows/spriteFrame',
                 category: 'fish',
                 isHot: true,
@@ -90,7 +76,6 @@ export class LobbyModel {
             {
                 id: 'game_04',
                 name: '遊戲四',
-                bundleName: AppConfig.BUNDLE_LOBBY,
                 iconPath: 'textures/icons/icon_slot_master/spriteFrame',
                 category: 'slot',
                 isNew: true,
@@ -98,33 +83,27 @@ export class LobbyModel {
             {
                 id: 'game_05',
                 name: '遊戲五',
-                bundleName: AppConfig.BUNDLE_LOBBY,
                 iconPath: 'textures/icons/icon_slot_master/spriteFrame',
                 category: 'card',
             },
             {
                 id: 'game_06',
                 name: '遊戲六',
-                bundleName: AppConfig.BUNDLE_LOBBY,
                 iconPath: 'textures/icons/icon_slot_master/spriteFrame',
                 category: 'card',
                 isNew: true,
-                mainComponent: 'Main',
             },
             {
                 id: 'game_07',
                 name: '遊戲七',
-                bundleName: AppConfig.BUNDLE_LOBBY,
                 iconPath: 'textures/icons/icon_fish_hunter/spriteFrame',
                 category: 'slot',
                 isHot: true,
-                mainComponent: 'SlotMain',
                 jackpot: 1258400,
             },
             {
                 id: 'game_08',
                 name: '遊戲八',
-                bundleName: AppConfig.BUNDLE_LOBBY,
                 iconPath: 'textures/icons/icon_bulls_and_cows/spriteFrame',
                 category: 'fish',
                 isHot: true,
@@ -133,7 +112,6 @@ export class LobbyModel {
             {
                 id: 'game_09',
                 name: '遊戲九',
-                bundleName: AppConfig.BUNDLE_LOBBY,
                 iconPath: 'textures/icons/icon_slot_master/spriteFrame',
                 category: 'slot',
                 isNew: true,
@@ -141,7 +119,6 @@ export class LobbyModel {
             {
                 id: 'game_10',
                 name: '遊戲十',
-                bundleName: AppConfig.BUNDLE_LOBBY,
                 iconPath: 'textures/icons/icon_slot_master/spriteFrame',
                 category: 'card',
             },

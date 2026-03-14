@@ -5,5 +5,8 @@
   "uuid": "73a40085-a850-429c-8ba5-ebbf74761403",
   "files": [],
   "subMetas": {},
-  "userData": {}
+  "userData": {
+    "isBundle": true,
+    "bundleName": "lobby_src"
+  }
 }

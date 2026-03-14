@@ -7,7 +7,7 @@
 | 規則 | 說明 |
 |------|------|
 | **純程式碼構建** | 所有 UI 元件不再依賴 Editor 中的 Prefab 檔案，改由 Script 動態建立。 |
-| **職責對稱** | 每個 UI 面板（Panel）都有一個對應的 `BaseUIController` 子類別。 |
+| **職責對稱** | 每個 UI 面板（Panel）都有一個對應的介面類別。 |
 | **資料驅動** | UI 狀態由資料（Model）決定，透過 `setup()` 或 `render()` 方法更新顯示。 |
 | **目錄一致性** | 腳本結構與大廳/遊戲 bundle 結構完全對齊。 |
 
@@ -41,7 +41,7 @@
 
 ```
 assets/bundles/games/[GameName]/
-├── scripts/
+├── src/                         ← 原始碼目錄 (原 scripts)
 │   ├── Main.ts                  ← 注入點，管理 MVC init
 │   ├── view/
 │   │   └── GameView.ts          ← 建立並持有所有 UI 實體
@@ -53,7 +53,7 @@ assets/bundles/games/[GameName]/
 │       ├── menuPanel/
 │       │   └── MenuPanel.ts     ← 包含 initUI() 生成邏輯
 │       └── ...
-└── textures/                    ← 僅存儲必要的素材 (SpriteFrames)，而非 Prefabs
+└── res/                         ← 僅存儲必要的素材 (原 textures/resources)
 ```
 
 ---
@@ -62,21 +62,17 @@ assets/bundles/games/[GameName]/
 
 ```typescript
 import { _decorator, Node, Label, Sprite, Color, UITransform, Button } from 'cc';
-import { BaseUIController } from '../../../../../scripts/framework/ui/BaseUIController';
+import { UIComponentBase } from '../../../../../core/game/base/ui/UIComponentBase';
 
 const { ccclass } = _decorator;
 
 @ccclass('MenuPanel')
-export class MenuPanel extends BaseUIController {
+export class MenuPanel extends UIComponentBase {
     // 1. 內部組件引用（不再使用 @property）
     private titleLabel!: Label;
 
     // 2. 暴露事件回調
     public onStartClick: () => void = () => {};
-
-    public override init(): void {
-        super.init(); // 執行基礎初始化 (如節點隱藏等)
-    }
 
     protected onLoad(): void {
         this.initUI(); // 3. 在載入時動態構建介面
@@ -140,8 +136,7 @@ export class MenuPanel extends BaseUIController {
 
 ## 6. 新增 UI 元件 Checklist (Code-only)
 
-- [ ] 在 `scripts/components/功能名/` 下建立 `.ts` 腳本，繼承 `BaseUIController`
+- [ ] 在 `src/components/功能名/` 下建立 `.ts` 腳本，繼承 `UIComponentBase`
 - [ ] 實作 `initUI()` 方法，使用 `new Node()` 與 `addComponent` 構建結構
 - [ ] 在 `View` 層（如 `LobbyView`）使用 `this.createComponentOnly()` 建立實體
 - [ ] 在 `Controller` 層注入需要的業務邏輯回調
-- [ ] (選填) 若有重複使用的 UI 樣式，封裝於 `BaseUIController` 的輔助方法中

@@ -1,20 +1,8 @@
-import {
-    _decorator,
-    Node,
-    Color,
-    Layout,
-    Button,
-    Size,
-    Sprite,
-    Label,
-    Widget,
-    log,
-    Vec3,
-} from 'cc';
-import { UIComponentBase } from '../../../../../scripts/core/base/ui/UIComponentBase';
+import { _decorator, Node, Color, Layout, Button, Size, Sprite, Label, Widget, Vec3 } from 'cc';
+import { UIComponentBase } from '../../../../../core/game/base/ui/UIComponentBase';
 import { GameCategory, ICategoryTab } from '../../model/LobbyModel';
-import { OrientationType } from '../../../../../scripts/framework/manager/ui/OrientationManager';
-import { NodeFactory } from '../../../../../scripts/core/utils/NodeFactory';
+import { OrientationType } from '../../../../../core/systems/screen/OrientationManager';
+import { NodeFactory } from '../../../../../core/utils/NodeFactory';
 
 const { ccclass } = _decorator;
 

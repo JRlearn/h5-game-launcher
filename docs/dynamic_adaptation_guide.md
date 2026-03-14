@@ -31,7 +31,7 @@ node.setScale(finalScale, finalScale, 1);
 
 ## 3. 螢幕旋轉提示系統 (Rotation Warning)
 
-當偵測到螢幕方向與專案設計（由 `AppConfig` 定義）不符時，系統會自動觸發提示。
+當偵測到螢幕方向與專案設計（由 `config/Config.ts` 定義）不符時，系統會自動觸發提示。
 
 ### 觸發邏輯
 *   **直屏專案**: 當 `aspectRatio > 1.0` (進入橫向區域) 時顯示提示。
@@ -40,7 +40,6 @@ node.setScale(finalScale, finalScale, 1);
 ### 技術實作細節
 *   **OrientationManager**: 全域單例，監聽 `canvas-resize` 並發送 `RESIZE` 與 `CHANGE` 事件。
 *   **OrientationTip**: 專屬提示組件，掛載 `BlockInputEvents` 阻擋下方所有互動。
-*   **置頂確保**: 提示彈窗顯示時，強制執行 `setSiblingIndex(999)`。
 
 ## 4. UI 適配開發流程
 
@@ -60,6 +59,5 @@ protected override onOrientationChange(orientation: OrientationType): void {
 
 ## 5. 相關檔案存放路徑
 
-*   **管理器**: `assets/scripts/framework/manager/ui/OrientationManager.ts`
-*   **提示組件**: `assets/scripts/framework/manager/ui/OrientationTip.ts`
-*   **設定檔**: `assets/scripts/config/AppConfig.ts`
+*   **管理器**: `assets/core/systems/screen/OrientationManager.ts`
+*   **設定檔**: `assets/app/config/Config.ts`
