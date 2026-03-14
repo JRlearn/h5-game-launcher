@@ -43,6 +43,8 @@ export class ScreenAdapter {
      */
     public update(): void {
         const winSize = view.getVisibleSize();
+        if (!winSize) return;
+
         const screenWidth = winSize.width;
         const screenHeight = winSize.height;
 

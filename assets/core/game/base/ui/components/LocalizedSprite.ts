@@ -8,7 +8,7 @@ const { ccclass, property, requireComponent } = _decorator;
 
 @ccclass('LocalizedSpriteItem')
 class LocalizedSpriteItem {
-    @property({ type: String, tooltip: '語系代碼 (例如 zh-TW)' })
+    @property({ tooltip: '語系代碼 (例如 zh-TW)' })
     language: string = LanguageType.EN_US;
 
     @property({ type: SpriteFrame, tooltip: '對應語系的圖片' })

@@ -57,6 +57,8 @@ export class OrientationManager {
      */
     private _checkOrientation(): void {
         const winSize = view.getVisibleSize();
+        if (!winSize) return;
+
         const width = winSize.width;
         const height = winSize.height;
 

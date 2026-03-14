@@ -1,158 +1,187 @@
+import { SlotControllerBase } from '../../../../common/src/slot/mvc/SlotControllerBase';
+import { SlotState } from '../../../../common/src/slot/stateMachine/SlotStateMachine';
+import { SoundManager } from '../../../../../core/systems/audio/SoundManager';
 import { GameModel } from '../model/GameModel';
 import { GameView } from '../view/GameView';
-import { ClusterLogic } from '../model/ClusterLogic';
-import { CascadeLogic } from '../model/CascadeLogic';
-import { WinCalculator } from '../model/WinCalculator';
-import { FeatureScanner } from '../model/FeatureScanner';
+import { SlotServerMock } from '../service/SlotServerMock';
 import { log } from 'cc';
+import { GameManager } from '../../../../../core/game/GameManager';
+import { GameConfig } from '../config/GameConfig';
 
-export class GameController {
-    constructor(
-        private view: GameView,
-        private model: GameModel,
-    ) {}
+/**
+ * GameController - 遊戲控制器 (Iteration 21+ Refactor)
+ * 繼承自 SlotControllerBase，單一職責處理 戰神賽特 流程控制。
+ */
+export class GameController extends SlotControllerBase<GameView, GameModel> {
+    protected override onStateChanged(state: SlotState): void {
+        // 可以在這裡處理全域的狀態變化邏輯，如鎖定按鈕等
+    }
 
-    public init(): void {
-        log('[SlotController] 初始化遊戲邏輯 (戰神賽特原型)');
-        this._refreshTopUI();
+    protected refreshTopUI(): void {
+        this.view.updateBalance(this.model.balance);
+        this.view.updateWin(this.model.currentWin);
+        this.view.updateFreeSpin(this.model.freeSpinCount);
+        this.view.updateMultiplier(this.model.currentMultiplier);
+
+        // 同步至全域外殼 Bridge (Phase 3)
+        GameManager.getInstance().updateBalance(this.model.balance);
     }
 
     public async startGame(): Promise<void> {
-        log('[SlotController] 遊戲開始');
+        log('[GameController] 遊戲開始');
+
+        // 初始化餘額 (從全域 Bridge 獲取)
+        this.model.balance = GameManager.getInstance().userInfo.balance;
+
+        const initialGrid = SlotServerMock.getInstance().generateInitialGrid(
+            this.model.COLUMN_COUNT,
+            this.model.ROW_COUNT,
+        );
+        this.model.grid = initialGrid;
+
         this.view.onSpinClick = async () => {
             await this.spin();
         };
         this.view.onBuyFeatureClick = () => {
             this.buyFreeSpinFeature();
         };
+        this.view.onAutoSpinToggle = (isOn: boolean) => {
+            this._isAutoSpin = isOn;
+            if (isOn && !this.model.isSpinning) this.spin();
+        };
+        this.view.onTurboToggle = (isOn: boolean) => {
+            this.model.isTurbo = isOn;
+            if (this.view.gridManager) this.view.gridManager.isTurbo = isOn;
+        };
+        this.view.onLowPowerToggle = (isOn: boolean) => {
+            this.model.isLowPower = isOn;
+            if (this.view.gridManager) this.view.gridManager.isLowPower = isOn;
+        };
+        this.view.onBetChange = (bet: number) => {
+            log(`[GameController] 下注金額變更為: ${bet}`);
+            this.model.betAmount = bet;
+            this.refreshTopUI();
+        };
     }
 
-    private _refreshTopUI(): void {
-        this.view.updateBalance(this.model.balance);
-        this.view.updateWin(this.model.currentWin);
-        this.view.updateFreeSpin(this.model.freeSpinCount);
-    }
-
-    /**
-     * 玩家購買 Free Spin 特性
-     */
     public buyFreeSpinFeature(): void {
         const cost = this.model.betAmount * 100;
         if (this.model.balance >= cost) {
-            log(`[SlotController] 購買 Free Spin! 扣除 ${cost} 餘額`);
             this.model.balance -= cost;
             this.model.addFreeSpin(15);
             this.model.isFreeSpin = true;
-            this._refreshTopUI();
-
-            // 可以自動觸發一次轉動，或者等待玩家按 Spin 時進入 Free Spin 邏輯
-            log(`[SlotController] 當前剩餘免費旋轉次數: ${this.model.freeSpinCount}`);
-        } else {
-            log(`[SlotController] 餘額不足 (${this.model.balance})，無法購買 Free Spin (${cost})`);
+            this.refreshTopUI();
         }
     }
 
     public async spin(): Promise<void> {
-        if (this.model.isSpinning) return;
+        if (!this._fsm.canSpin()) return;
 
-        // 若在 Free Spin 模式，檢查是否還有次數
+        // 1. 旋轉前置處理 (扣錢/FS檢查)
         if (this.model.isFreeSpin && this.model.freeSpinCount > 0) {
             this.model.freeSpinCount--;
-            log(`[SlotController] Free Spin 啟動! 剩餘次數: ${this.model.freeSpinCount}`);
+            this.view.setNightMode(true);
         } else {
-            log(`[SlotController] 一般旋轉啟動!`);
+            if (this.model.isFreeSpin) this.view.setNightMode(false);
             this.model.isFreeSpin = false;
-            // 扣除下注額
             this.model.balance -= this.model.betAmount;
         }
 
-        log('[SlotController] ================= 開始轉動 =================');
-        this._refreshTopUI();
+        this._fsm.transitionTo(SlotState.SPINNING);
+        this.model.resetResults(this.model.isFreeSpin);
+        this.refreshTopUI();
 
-        this.model.isSpinning = true;
+        // SoundManager.getInstance().playSFX(GameConfig.getResBundleName(), 'audio/spin_start');
 
-        // 1. 重置與生成新盤面
-        this.model.resetResults();
+        // 2. 向 "Server" 請求結果
+        const result = SlotServerMock.getInstance().requestSpin(
+            this.model.COLUMN_COUNT,
+            this.model.ROW_COUNT,
+            this.model.betAmount,
+        );
 
-        // 2. 同步初始畫面
+        // 同步初始畫面
+        this.model.grid = result.initialGrid;
         if (this.view.gridManager) {
             await this.view.gridManager.syncGridFromData(this.model.grid);
         }
 
-        // 3. 開始連鎖消除檢查
-        let loopCount = 0;
-        let hasWin = true;
-        let roundBaseWin = 0;
-        const MAX_CASCADE_LOOP = 20;
+        // 3. 按照 Server 給出的 Cascade 序列執行視覺動畫
+        this._fsm.transitionTo(SlotState.CASCADING);
+        for (let i = 0; i < result.cascades.length; i++) {
+            const cascade = result.cascades[i];
 
-        while (hasWin && loopCount < MAX_CASCADE_LOOP) {
-            loopCount++;
-
-            // 掃描盤面找出中獎 Cluster
-            const clusters = ClusterLogic.findWinningClusters(this.model.grid, 8);
-
-            if (clusters.length > 0) {
-                // 結算本波基礎贏分
-                const { totalWin, clusterWins } = WinCalculator.calculateWin(
-                    clusters,
-                    this.model.betAmount,
-                );
-                roundBaseWin += totalWin;
-
-                log(
-                    `[SlotController] --- 第 ${loopCount} 輪連鎖 --- 找到 ${clusters.length} 組中獎, 獲得基礎分 ${totalWin}`,
+            if (this.view.gridManager) {
+                // (A) 檢查並收集這一步的所有倍數
+                const multipliersOnBoard: any[] = [];
+                cascade.grid.forEach((col) =>
+                    col.forEach((s) => {
+                        if (s.type === 9) multipliersOnBoard.push(s);
+                    }),
                 );
 
-                // 執行掉落與生成邏輯
-                const cascadeResult = CascadeLogic.applyCascade(this.model.grid, clusters, () =>
-                    this.model.getNextSymbolId(),
-                );
+                const collectPromises = multipliersOnBoard.map(async (m) => {
+                    const worldPos = this.view.gridManager!.getSymbolWorldPosition(m.id);
+                    await this.view.playMultiplierCollectAnimation(
+                        worldPos,
+                        m.multiplier || 2,
+                        this.model.isTurbo,
+                    );
+                });
 
-                this.model.grid = cascadeResult.newGrid;
+                // (B) 執行消除動畫
+                await this.view.gridManager.eliminateSymbols(cascade.clusters);
+                /* SoundManager.getInstance().playSFX(
+                    GameConfig.getResBundleName(),
+                    'audio/win_small',
+                ); */
 
-                // 模擬等待動畫，目前直接同步網格
-                if (this.view.gridManager) {
-                    await this.view.gridManager.syncGridFromData(this.model.grid);
+                // 等待倍數收集動畫完成 (若有)
+                if (cascade.clusters.length > 0) {
+                    await Promise.all(collectPromises);
                 }
-            } else {
-                hasWin = false;
+
+                // (C) 執行補滿掉落動畫
+                const nextGrid =
+                    i + 1 < result.cascades.length
+                        ? result.cascades[i + 1].grid
+                        : result.initialGrid;
+
+                await this.view.gridManager.refillGrid(nextGrid);
             }
         }
 
-        // 4. 結算全域 Multiplier 與 Scatter
-        const { totalMultiplier, scatterCount } = FeatureScanner.scanBoard(this.model.grid);
-        this.model.currentMultiplier = totalMultiplier;
-
-        log(
-            `[SlotController] 盤面特殊符號掃描: Scatter=${scatterCount}, Multiplier倍率合=+${totalMultiplier}x`,
-        );
-
-        // 5. 最終贏分結算 = 基礎得分 x (有倍率則乘，無則 * 1)
-        const finalMultiplier = this.model.currentMultiplier > 0 ? this.model.currentMultiplier : 1;
-        this.model.currentWin = roundBaseWin * finalMultiplier;
+        // 最終視覺更新
+        this._fsm.transitionTo(SlotState.SETTLING);
+        this.model.currentMultiplier = result.totalMultiplier;
+        this.model.currentWin = result.finalTotalWin;
+        this.view.updateMultiplier(result.totalMultiplier);
 
         if (this.model.currentWin > 0) {
             this.model.balance += this.model.currentWin;
-            log(
-                `[SlotController] 本局贏分計算: ${roundBaseWin} x ${finalMultiplier} = ${this.model.currentWin}`,
-            );
+            this.view.updateHistory(this.model.currentWin);
+
+            if (this.model.currentWin >= this.model.betAmount * 20) {
+                this.view.shakeScreen(1.0, 30);
+                this.view.playWinFountainEffect();
+                await new Promise<void>((res) => this.view.showBigWin(this.model.currentWin, res));
+            }
         }
 
-        // 6. 檢查 Free Spin 觸發（4顆 SCATTER 觸發 15 次 Free Spins）
-        if (scatterCount >= 4) {
-            log(`[SlotController] 觸發 Free Spin! +15次`);
+        if (result.scatterCount >= 4) {
+            this._fsm.transitionTo(SlotState.FREE_SPIN_INTRO);
             this.model.addFreeSpin(15);
             this.model.isFreeSpin = true;
+            // SoundManager.getInstance().playSFX(GameConfig.getResBundleName(), 'audio/fs_trigger');
+            await new Promise<void>((res) => this.view.showFreeSpinIntro(res));
         }
 
-        this.model.isSpinning = false;
-        this._refreshTopUI();
-        log(
-            `[SlotController] ================= 轉動結束, 當前餘額: ${this.model.balance} =================`,
-        );
-    }
+        this._fsm.transitionTo(SlotState.IDLE);
+        this.refreshTopUI();
 
-    public cleanup(): void {
-        log('[SlotController] 清理資源');
+        if (this._isAutoSpin) {
+            await new Promise((r) => setTimeout(r, 1200));
+            if (this._isAutoSpin) this.spin();
+        }
     }
 }

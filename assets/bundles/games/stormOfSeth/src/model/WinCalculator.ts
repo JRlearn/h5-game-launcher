@@ -19,21 +19,53 @@ export class WinCalculator {
      * type 5~7: 高價值符號 (Eye of Horus, Golden Scarab, Seth Weapon)
      */
     private static getPaytableMultiplier(type: number, clusterSize: number): number {
-        if (type >= 0 && type <= 4) {
-            // Low Value Symbols
-            if (clusterSize >= 12) return 25;
-            if (clusterSize >= 10) return 10;
-            if (clusterSize >= 8) return 5;
-            return 0;
-        } else if (type >= 5 && type <= 7) {
-            // Premium Symbols
-            if (clusterSize >= 12) return 100;
-            if (clusterSize >= 10) return 50;
-            if (clusterSize >= 8) return 20;
-            return 0;
+        // Based on README.md specification
+        switch (type) {
+            case 0: // 藍色寶石
+                if (clusterSize >= 12) return 2.0;
+                if (clusterSize >= 10) return 0.75;
+                if (clusterSize >= 8) return 0.25;
+                break;
+            case 1: // 綠色寶石
+                if (clusterSize >= 12) return 4.0;
+                if (clusterSize >= 10) return 1.0;
+                if (clusterSize >= 8) return 0.40;
+                break;
+            case 2: // 橘色寶石
+                if (clusterSize >= 12) return 5.0;
+                if (clusterSize >= 10) return 1.5;
+                if (clusterSize >= 8) return 0.50;
+                break;
+            case 3: // 紫色寶石
+                if (clusterSize >= 12) return 8.0;
+                if (clusterSize >= 10) return 1.2;
+                if (clusterSize >= 8) return 0.8;
+                break;
+            case 4: // 紅色寶石
+                if (clusterSize >= 12) return 10.0;
+                if (clusterSize >= 10) return 1.5;
+                if (clusterSize >= 8) return 1.0;
+                break;
+            case 5: // Ankh (十字架)
+                if (clusterSize >= 12) return 12.0;
+                if (clusterSize >= 10) return 2.0;
+                if (clusterSize >= 8) return 1.5; // README specifies 1.5 for 8+
+                break;
+            case 6: // Scarab (聖甲蟲)
+                if (clusterSize >= 12) return 15.0;
+                if (clusterSize >= 10) return 5.0;
+                if (clusterSize >= 8) return 2.0;
+                break;
+            case 7: // Eye of Ra (荷魯斯之眼)
+                if (clusterSize >= 12) return 25.0;
+                if (clusterSize >= 10) return 10.0;
+                if (clusterSize >= 8) return 2.5;
+                break;
+            case 8: // Seth (Scatter)
+                if (clusterSize >= 6) return 100.0;
+                break;
         }
 
-        // 超出預期的 type 不給分 (例如 Scatter/Multiplier 不在此處算線分)
         return 0;
     }
 

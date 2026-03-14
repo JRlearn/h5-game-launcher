@@ -1,30 +1,47 @@
-import { _decorator, Component, Node, Layers, UITransform, Size, Widget, Layout } from 'cc';
+import {
+    _decorator,
+    Component,
+    Node,
+    Layers,
+    UITransform,
+    Size,
+    Layout,
+    Color,
+    Sprite,
+    tween,
+    Vec3,
+} from 'cc';
 import { SymbolData } from '../../model/SymbolData';
-import { GameModel } from '../../model/GameModel';
-import { NodeFactory } from '../../../../../../core/utils/NodeFactory';
+import { ClusterInfo } from '../../model/ClusterLogic';
+import { StormSymbol } from './StormSymbol';
+import { EffectManager } from '../ui/EffectManager';
 
 const { ccclass, property } = _decorator;
 
 /**
- * GridManager - 負責 6x5 網格節點創建、符號生成與佈局
- * 遵循 Cocos UI Generator 原則
+ * GridManager - 負責 6x5 網格節點創建、符號生成與佈局 (UI 元件化重構版)
+ * 單一職責：管理掉落層的實體 StormSymbol 物件
  */
 @ccclass('GridManager')
 export class GridManager extends Component {
-    /** 節點參照 */
     private _gridRootNode: Node | null = null;
+    private _symbolsMap: Map<number, StormSymbol> = new Map();
 
-    /** 單個圖騰容器尺寸設定 */
     private readonly SYMBOL_WIDTH = 100;
     private readonly SYMBOL_HEIGHT = 100;
     private readonly SPACING_X = 5;
     private readonly SPACING_Y = 5;
 
+    private _isTurbo: boolean = false;
+    private _isLowPower: boolean = false;
     private _columnCount: number = 6;
     private _rowCount: number = 5;
 
-    protected onLoad(): void {
-        // Init will be called externally
+    public set isTurbo(val: boolean) {
+        this._isTurbo = val;
+    }
+    public set isLowPower(val: boolean) {
+        this._isLowPower = val;
     }
 
     public init(cols: number, rows: number): void {
@@ -33,39 +50,27 @@ export class GridManager extends Component {
         this._buildUI();
     }
 
-    /**
-     * 主導方法：調度所有節點創建並組裝場景樹
-     */
     private _buildUI(): void {
         this.node.getComponent(UITransform) || this.node.addComponent(UITransform);
-
         this._gridRootNode = this._createGridRoot();
         this.node.addChild(this._gridRootNode);
     }
 
-    /**
-     * 創建 Grid 主容器
-     */
     private _createGridRoot(): Node {
         const gridNode = new Node('GridRoot');
         gridNode.layer = Layers.Enum.DEFAULT;
-
         const uiTransform = gridNode.addComponent(UITransform);
-        // Set size based on columns and rows
-        const cols = this._columnCount;
-        const rows = this._rowCount;
-        const totalWidth = cols * this.SYMBOL_WIDTH + (cols - 1) * this.SPACING_X;
-        const totalHeight = rows * this.SYMBOL_HEIGHT + (rows - 1) * this.SPACING_Y;
+        const totalWidth =
+            this._columnCount * this.SYMBOL_WIDTH + (this._columnCount - 1) * this.SPACING_X;
+        const totalHeight =
+            this._rowCount * this.SYMBOL_HEIGHT + (this._rowCount - 1) * this.SPACING_Y;
         uiTransform.setContentSize(new Size(totalWidth, totalHeight));
         uiTransform.setAnchorPoint(0.5, 0.5);
 
-        // 使用 Layout 以方便等距排列
         const layout = gridNode.addComponent(Layout);
         layout.type = Layout.Type.GRID;
         layout.resizeMode = Layout.ResizeMode.NONE;
         layout.startAxis = Layout.AxisDirection.HORIZONTAL;
-        layout.paddingLeft = 0;
-        layout.paddingTop = 0;
         layout.spacingX = this.SPACING_X;
         layout.spacingY = this.SPACING_Y;
         layout.cellSize = new Size(this.SYMBOL_WIDTH, this.SYMBOL_HEIGHT);
@@ -73,73 +78,133 @@ export class GridManager extends Component {
         return gridNode;
     }
 
-    /**
-     * 依照提供的 grid 資料，生成對應的占位元件
-     */
     public async syncGridFromData(gridData: SymbolData[][]): Promise<void> {
         if (!this._gridRootNode) return;
-
         this._gridRootNode.removeAllChildren();
+        this._symbolsMap.clear();
 
-        const cols = gridData.length;
-        const rows = gridData[0].length;
+        const promises: Promise<void>[] = [];
+        let scatterCount = 0;
 
-        // 假設 grid[col][row] 中 row 越多代表越低
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < cols; col++) {
-                const symbolData = gridData[col][row];
-                const blockNode = this._createSymbolBlock(symbolData);
-                this._gridRootNode.addChild(blockNode);
+        for (let col = 0; col < gridData.length; col++) {
+            for (let row = 0; row < gridData[col].length; row++) {
+                const data = gridData[col][row];
+                if (data.type === 8) scatterCount++;
+
+                const symbolNode = new Node(`Symbol_${data.id}`);
+                const stormSymbol = symbolNode.addComponent(StormSymbol);
+                this._gridRootNode.addChild(symbolNode);
+                stormSymbol.init(data, this.SYMBOL_WIDTH);
+                this._symbolsMap.set(data.id, stormSymbol);
+
+                let delay = col * 0.1 + (this._rowCount - row) * 0.05;
+                let duration = 0.4;
+
+                if (this._isTurbo) {
+                    delay *= 0.5;
+                    duration = 0.15;
+                }
+
+                let suspense = false;
+                if (scatterCount >= 3 && col >= 3 && !this._isTurbo) {
+                    delay += 0.5;
+                    duration = 0.8;
+                    suspense = true;
+                } else if (scatterCount >= 3 && col >= 3 && this._isTurbo) {
+                    delay += 0.1;
+                    duration = 0.3;
+                    suspense = true;
+                }
+
+                promises.push(stormSymbol.playDrop(delay, duration, suspense));
             }
         }
+        await Promise.all(promises);
+    }
 
-        // Timeout 確保 Layout 更新 (hacky for demo)
-        return new Promise((resolve) => setTimeout(resolve, 300));
+    public getSymbolWorldPosition(symbolId: number): Vec3 {
+        const stormSymbol = this._symbolsMap.get(symbolId);
+        return stormSymbol ? stormSymbol.node.worldPosition : new Vec3();
+    }
+
+    public async eliminateSymbols(clusters: ClusterInfo[]): Promise<void> {
+        const promises: Promise<void>[] = [];
+
+        for (const cluster of clusters) {
+            for (const symbol of cluster.symbols) {
+                const stormSymbol = this._symbolsMap.get(symbol.id);
+                if (stormSymbol) {
+                    this._playExplosionEffect(stormSymbol.node.position, stormSymbol.getColor());
+                    promises.push(
+                        stormSymbol.playExplode(this._isTurbo).then(() => {
+                            this._symbolsMap.delete(symbol.id);
+                        }),
+                    );
+                }
+            }
+        }
+        await Promise.all(promises);
     }
 
     /**
-     * 產生單一格子節點
-     * @param data 符號資料
+     * 執行掉落補滿動畫 (Cascade Refill)
+     * @param nextGridData 下一階段的完整網格資料
      */
-    private _createSymbolBlock(data: SymbolData): Node {
-        const node = new Node(`Symbol_${data.id}`);
-        node.layer = Layers.Enum.DEFAULT;
-        const trans = node.addComponent(UITransform);
-        trans.setContentSize(new Size(this.SYMBOL_WIDTH, this.SYMBOL_HEIGHT));
+    public async refillGrid(nextGridData: SymbolData[][]): Promise<void> {
+        if (!this._gridRootNode) return;
 
-        // 加入背景色以利辦識不同 Token
-        const colors = [
-            '#FF0000',
-            '#00FF00',
-            '#0000FF',
-            '#FFFF00',
-            '#FF00FF',
-            '#00FFFF',
-            '#FFA500',
-            '#800080',
-            '#D4AF37',
-            '#FF1493',
-        ];
-        const hex = colors[data.type] || '#FFFFFF';
+        const promises: Promise<void>[] = [];
+        const newSymbolsMap: Map<number, StormSymbol> = new Map();
 
-        const { node: bgNode, sprite } = NodeFactory.createSpriteNode('bg');
-        // _createSymbolBlock is just mock
-        bgNode.layer = Layers.Enum.DEFAULT;
-        sprite.color.fromHEX(hex);
-        const bgTrans = bgNode.getComponent(UITransform);
-        if (bgTrans) {
-            bgTrans.setContentSize(this.SYMBOL_WIDTH - 10, this.SYMBOL_HEIGHT - 10);
+        for (let col = 0; col < nextGridData.length; col++) {
+            let dropCount = 0;
+            for (let row = nextGridData[col].length - 1; row >= 0; row--) {
+                const data = nextGridData[col][row];
+                let stormSymbol = this._symbolsMap.get(data.id);
+
+                const targetX = (col - (this._columnCount - 1) / 2) * (this.SYMBOL_WIDTH + this.SPACING_X);
+                const targetY = (row - (this._rowCount - 1) / 2) * (this.SYMBOL_HEIGHT + this.SPACING_Y);
+                const targetPos = new Vec3(targetX, targetY, 0);
+
+                if (stormSymbol) {
+                    // 已存在的符號，如果位置不對則掉落
+                    if (!stormSymbol.node.position.equals(targetPos)) {
+                        promises.push(this._playMoveAnimation(stormSymbol.node, targetPos));
+                    }
+                    newSymbolsMap.set(data.id, stormSymbol);
+                } else {
+                    // 新生成的符號，從上方掉入
+                    const symbolNode = new Node(`Symbol_${data.id}`);
+                    stormSymbol = symbolNode.addComponent(StormSymbol);
+                    this._gridRootNode.addChild(symbolNode);
+                    stormSymbol.init(data, this.SYMBOL_WIDTH);
+                    
+                    // 設定初始位置 (在頂部之上)
+                    dropCount++;
+                    const startY = (this._rowCount / 2 + dropCount) * (this.SYMBOL_HEIGHT + this.SPACING_Y);
+                    symbolNode.setPosition(targetX, startY, 0);
+
+                    promises.push(stormSymbol.playDrop(col * 0.05, 0.3, false));
+                    newSymbolsMap.set(data.id, stormSymbol);
+                }
+            }
         }
-        node.addChild(bgNode);
 
-        let displayTxt = data.type.toString();
-        if (data.type === 8) displayTxt = 'S'; // Scatter
-        if (data.type === 9) displayTxt = `M${data.multiplier}x`; // Multiplier
+        this._symbolsMap = newSymbolsMap;
+        await Promise.all(promises);
+    }
 
-        const { label } = NodeFactory.createLabelNode('Val', displayTxt, 40);
-        label.node.layer = Layers.Enum.DEFAULT;
-        label.color.fromHEX('#000000');
-        node.addChild(label.node);
-        return node;
+    private _playMoveAnimation(node: Node, targetPos: Vec3): Promise<void> {
+        return new Promise((resolve) => {
+            tween(node)
+                .to(0.2, { position: targetPos }, { easing: 'sineIn' })
+                .call(() => resolve())
+                .start();
+        });
+    }
+
+    private _playExplosionEffect(pos: Vec3, color: Color): void {
+        if (this._isLowPower) return;
+        EffectManager.getInstance().playExplosionSmoke(pos, color);
     }
 }

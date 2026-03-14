@@ -58,11 +58,12 @@ export abstract class ViewBase {
     }
 
     /**
-     * 將 UI 元件的節點加入根節點
-     * @param component BaseUIController 子類別實例
+     * 將 UI 元件的節點或直接將節點加入根節點
+     * @param target BaseUIController 子類別實例 或 Node
      */
-    protected addChild(component: Component): void {
-        this.root.addChild(component.node);
+    protected addChild(target: Component | Node): void {
+        const node = target instanceof Node ? target : target.node;
+        this.root.addChild(node);
     }
 
     /**

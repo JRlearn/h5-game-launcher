@@ -42,4 +42,6 @@ export interface GameEventMap {
         step: string;
         error: any;
     };
+    [EventName.SUBGAME_EXIT]: void;
+    [EventName.USER_BALANCE_CHANGED]: number;
 }

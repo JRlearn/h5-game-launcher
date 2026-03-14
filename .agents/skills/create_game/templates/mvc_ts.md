@@ -3,41 +3,70 @@
 ## 1. Model (GameModel.ts)
 ```typescript
 export class GameModel {
-    public score: number = 0;
-    // ... 定義資料結構與介面
+    /** 範例：列數 */
+    public readonly COLUMN_COUNT = 5;
+    /** 範例：行數 */
+    public readonly ROW_COUNT = 5;
+
+    public balance: number = 0;
+    public currentWin: number = 0;
+    public isSpinning: boolean = false;
+
+    // ... 定義資料結構與業務規則
 }
 ```
 
 ## 2. View (GameView.ts)
 ```typescript
-import { ViewBase } from '../../../../scripts/core/base/mvc/view/ViewBase';
+import { Node, Layers, UITransform } from 'cc';
+import { ViewBase } from '../../../../core/game/base/mvc/view/ViewBase';
 
+/**
+ * 視圖層 - 負責 UI 生成與動畫表現
+ * 遵循 cocos_ui_generator 全代碼規範
+ */
 export class GameView extends ViewBase {
+    
     public override init(): void {
-        // 使用 NodeFactory 或 UIManager 建立 UI
-        // this.root 是子遊戲的 Node
+        this._buildUI();
     }
+
+    private _buildUI(): void {
+        const trans = this.getUITransform();
+        trans.setContentSize(720, 1280); // 以設計解析度為準
+
+        // 依序構建子節點
+        // this.root.addChild(this._createBackground());
+    }
+
+    // 實作私有 _createXXXX 方法...
 }
 ```
 
 ## 3. Controller (GameController.ts)
 ```typescript
+import { log } from 'cc';
 import { GameModel } from '../model/GameModel';
 import { GameView } from '../view/GameView';
 
+/**
+ * 控制器 - 業務邏輯中樞
+ */
 export class GameController {
     constructor(private view: GameView, private model: GameModel) {}
 
     public init(): void {
-        // 綁定事件或初始化狀態
+        log('[GameController] 初始化');
+        // 初始化狀態、訂閱同步 UI
     }
 
-    public startGame(): void {
-        // 遊戲開始邏輯
+    public async startGame(): Promise<void> {
+        // 設定 View 回調，啟動遊戲循環
+        // this.view.onSpinClick = () => this.spin();
     }
 
     public cleanup(): void {
-        // 清除監聽或狀態
+        // 清理監聽
     }
 }
 ```

@@ -20,10 +20,14 @@ export const EventName = {
     // System
     LANGUAGE_CHANGED: 'language-changed',
 
-    // Launcher
+    // Launcher & Flow
     LAUNCHER_PROGRESS: 'launcher-progress',
     LAUNCHER_COMPLETE: 'launcher-complete',
     LAUNCHER_ERROR: 'launcher-error',
+    SUBGAME_EXIT: 'subgame-exit',
+
+    // Bridge / Session
+    USER_BALANCE_CHANGED: 'user-balance-changed',
 } as const;
 
 export type EventNameType = (typeof EventName)[keyof typeof EventName];

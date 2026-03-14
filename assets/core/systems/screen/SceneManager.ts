@@ -156,11 +156,17 @@ export class SceneManager {
         if (!this._currentGameId) return;
 
         const lang = LanguageManager.getInstance().getLanguage();
-        const basePath = `${AppConfig.GAMES_DIR_PREFIX}${this._currentGameId}`;
         const resMgr = ResManager.getInstance();
 
         log(`[SceneManager] 🗑️ 正在清空資源：${this._currentGameId}`);
-        resMgr.releaseBundle(`${basePath}/res/${lang}`);
+
+        // 1. 釋放入口代碼與 Prefab Bundle (對應 enterGame 中的 preloadBundle)
+        resMgr.releaseBundle(`${this._currentGameId}_src`);
+
+        // 2. 釋放多國語系資源 Bundle (對應 Subgame Main.ts 中的 onLoadResources)
+        // 此處命名規則暫與各遊戲 Config 保持一致 (e.g., stormOfSeth_res_zh-TW)
+        resMgr.releaseBundle(`${this._currentGameId}_res_${lang}`);
+
         this._currentGameId = null;
     }
 

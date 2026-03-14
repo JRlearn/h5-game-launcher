@@ -5,6 +5,7 @@ import { NodeFactory } from '../core/utils/NodeFactory';
 import { OrientationManager, OrientationType } from '../core/systems/screen/OrientationManager';
 import { OrientationTip } from './ui/OrientationTip';
 import { ScreenAdapter } from '../core/systems/screen/ScreenAdapter';
+import { HeaderUI } from './ui/HeaderUI';
 
 const { ccclass } = _decorator;
 
@@ -70,6 +71,12 @@ export class AppScene extends Component {
         tipNode.layer = Layers.Enum.UI_2D;
         this._canvasNode.addChild(tipNode);
         this._orientationTip = tipNode.addComponent(OrientationTip);
+
+        // 建立全域 Header (置於 UIRoot)
+        const headerNode = new Node('HeaderUI');
+        headerNode.layer = Layers.Enum.DEFAULT;
+        this._uiRoot.addChild(headerNode);
+        headerNode.addComponent(HeaderUI);
 
         this.node.addChild(this._canvasNode);
 

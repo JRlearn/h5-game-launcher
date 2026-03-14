@@ -30,7 +30,7 @@ export class Launcher extends Component {
         log('[Launcher][INFO] onLoad');
 
         // 1. 初始化資源與本地存儲
-        GameManager.getInstance().init();
+        GameManager.getInstance().bootstrap();
 
         // 2. 初始化進度管理器與 UI
         ProgressManager.getInstance().init(this._WEIGHT_CONFIG);

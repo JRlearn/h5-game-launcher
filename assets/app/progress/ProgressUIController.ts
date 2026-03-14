@@ -78,13 +78,15 @@ export class ProgressUIController extends Component {
         });
         barNode.setPosition(-barSize.width / 2, 0);
         const barSprite = barNode.addComponent(Sprite);
-        barSprite.type = Sprite.Type.FILLED;
-        barSprite.fillType = Sprite.FillType.HORIZONTAL;
+        barSprite.type = Sprite.Type.SIMPLE;
+        barSprite.sizeMode = Sprite.SizeMode.CUSTOM;
         barSprite.color = new Color(100, 255, 100, 255);
         node.addChild(barNode);
 
         // 4. 進度條組件
         const pb = node.addComponent(ProgressBar);
+        pb.mode = ProgressBar.Mode.HORIZONTAL;
+        pb.totalLength = barSize.width;
         pb.progress = 0;
         pb.barSprite = barSprite;
         this._progressBar = pb;
